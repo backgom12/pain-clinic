@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-19T07:24:18.395Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-19T07:51:36.588Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -1145,8 +1145,9 @@ function chooseEvent(i){
 }
 /* ---------- auto mode: time runs by itself, associates see every patient ---------- */
 /* ---------- rewarded ads (Android app only; hidden on the web) ---------- */
-// 출시 전에 AdMob에서 받은 실제 광고 단위 ID로 바꾸고 testing을 false로.
-const AD_CFG={rewardId:'ca-app-pub-3940256099942544/5224354917',testing:true};
+// 보상형 광고 단위 (AdMob: 보상형_기본). testing:true 동안은 구글 테스트 광고가 나와요.
+// 정식 출시 때 testing:false 로 바꾸고 npm run deploy 하면 앱 재설치 없이 실제 광고로 바뀌어요.
+const AD_CFG={rewardId:'ca-app-pub-9084842509953360/1059911044',testing:true};
 const Ads={on:false,busy:false,A:null};
 (async()=>{try{const C=window.Capacitor;if(!C||!C.isNativePlatform||!C.isNativePlatform())return;
   const A=C.registerPlugin('AdMob');await A.initialize({initializeForTesting:AD_CFG.testing});Ads.A=A;Ads.on=true;if(state)render();}catch(e){}})();
