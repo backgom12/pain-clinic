@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-19T07:09:32.993Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-19T07:24:18.395Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -301,12 +301,16 @@ const TX={
   joint:{name:'관절강 주사',time:10,fat:3,price:50000,cov:true,inj:true,proc:true,note:'관절·점액낭 주사'},
   prolo:{name:'프롤로 주사',time:15,fat:4,price:80000,cov:false,inj:true,proc:true,note:'인대·힘줄 증식치료'},
   nerve:{name:'초음파 유도 신경차단',time:15,fat:5,price:90000,cov:true,inj:true,proc:true,req:'us',note:'말초신경·신경근 차단'},
-  epi:{name:'경막외 신경차단술',time:20,fat:8,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm 투시하 · 방사선사 필요'},
+  epi:{name:'추궁간 경막외 차단술 (ILEB)',time:20,fat:8,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm 투시하 · 방사선사 필요'},
+  tfeb:{name:'경추간공 경막외 차단술 (TFEB)',time:20,fat:7,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm · 신경근 주위 경막외'},
+  root:{name:'선택적 신경근 차단술 (root block)',time:20,fat:7,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm · 해당 레벨 신경근'},
+  psoas:{name:'요근구획 차단술 (psoas compartment)',time:20,fat:7,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm · 요신경총'},
+  mbb:{name:'내측지·후관절 차단술 (MBB / facet)',time:15,fat:5,price:120000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm · 후관절 통증'},
   rf:{name:'고주파 열응고술',time:30,fat:10,price:350000,cov:false,proc:true,req:'rf',radio:true,note:'후관절·무릎 신경 소작'},
   xray:{name:'X-ray 촬영',time:5,fat:1,price:12000,cov:true,req:'xray',radio:true,note:'방사선사 촬영'},
   refer:{name:'상급병원 전원',time:5,fat:1,price:0,cov:true,note:'진료의뢰서 작성'}
 };
-const TX_ORDER=['med','pt','manual','eswt','tpi','joint','prolo','nerve','epi','rf','refer'];
+const TX_ORDER=['med','pt','manual','eswt','tpi','joint','prolo','nerve','tfeb','root','psoas','mbb','epi','rf','refer'];
 const REQ_NAME={us:'초음파',eswt:'체외충격파 기기',carm:'C-arm',rf:'고주파 장비',xray:'X-ray',manualRoom:'도수치료실'};
 const UNIT_PER_PT=16,MANUAL_PER_ROOM=14,ESWT_PER_MACHINE=15;
 /* 실제 수가 수준에 맞춰 모든 진료비를 1.5배로 */
@@ -319,19 +323,19 @@ const DX=[
  {id:'neck',name:'경추 추간판 탈출증 (목디스크)',ages:[30,62],w:10,jobs:['개발자','회사원','웹툰 작가','택배기사'],
   cc:['목이 뻐근하고 오른팔이 찌릿찌릿 저려요.','고개를 뒤로 젖히면 팔까지 전기가 오는 것 같아요.','손가락 끝이 저려서 마우스 잡기가 힘들어요.'],
   sx:['한쪽 팔·손가락으로 뻗치는 저림','목을 뒤로 젖히면 방사통 악화 (Spurling 검사 양성)','어깨뼈 안쪽 통증'],
-  eff:{epi:3,nerve:2.4,med:1.2,pt:1,manual:1,tpi:.6,prolo:.5,rf:1,refer:.5}},
+  eff:{root:3,tfeb:2.9,epi:2.8,nerve:2.4,mbb:1.2,med:1.2,pt:1,manual:1,tpi:.6,prolo:.5,rf:1,refer:.5}},
  {id:'lumbar',name:'요추 추간판 탈출증 (허리디스크)',ages:[25,60],w:12,jobs:['택배기사','건설 현장 반장','회사원','택시기사'],
   cc:['허리도 아픈데 왼쪽 다리가 당겨서 못 걷겠어요.','엉덩이부터 종아리까지 저리고 쑤셔요.','앉아 있으면 다리가 더 저려요.'],
   sx:['한쪽 다리로 뻗치는 방사통','하지직거상 검사 45°에서 양성','기침·재채기 할 때 악화'],
-  eff:{epi:3,nerve:2.4,manual:1.3,med:1.1,pt:1,rf:.8,tpi:.5,prolo:.4,refer:.5}},
+  eff:{tfeb:3,root:3,epi:2.7,psoas:2.4,nerve:2.2,mbb:1,manual:1.3,med:1.1,pt:1,rf:.8,tpi:.5,prolo:.4,refer:.5}},
  {id:'stenosis',name:'척추관 협착증',ages:[62,86],w:9,jobs:['은퇴 교사','재래시장 상인','아파트 경비원','주부'],
   cc:['조금만 걸어도 다리가 터질 것 같아서 쉬었다 가요.','시장 한 바퀴를 못 돌아요. 앉으면 좀 괜찮고요.','다리가 저리고 힘이 없어요.'],
   sx:['걸을 때 양쪽 다리 저림 (신경인성 파행)','허리를 숙이면 증상 완화','5분 이상 걷기 어려움'],
-  eff:{epi:3,nerve:2,rf:1.4,med:1.4,pt:1,manual:.4,tpi:.4,prolo:.5,refer:.8}},
+  eff:{epi:3,tfeb:2.8,root:2.6,psoas:2.5,nerve:1.8,mbb:1.2,rf:1.4,med:1.4,pt:1,manual:.4,tpi:.4,prolo:.5,refer:.8}},
  {id:'facet',name:'요추 후관절 증후군',ages:[40,76],w:8,jobs:['골프 동호회 회장','회사원','주부','요가 강사'],
   cc:['아침에 일어나면 허리가 뻣뻣해서 한참 걸려요.','허리를 뒤로 젖히면 콕콕 찔러요.','오래 서 있으면 허리 아래쪽이 아파요.'],
   sx:['허리를 뒤로 젖히거나 돌릴 때 통증','다리 방사통은 없음','척추 바로 옆 국소 압통'],
-  eff:{nerve:3,manual:2,pt:1.5,rf:1.5,tpi:1.1,med:1,epi:1.2,prolo:1.2,eswt:.6,joint:.3,refer:.2}},
+  eff:{mbb:3,nerve:2.6,manual:2,pt:1.5,rf:1.5,tpi:1.1,med:1,epi:1.2,tfeb:1.2,root:.8,psoas:.8,prolo:1.2,eswt:.6,joint:.3,refer:.2}},
  {id:'frozen',name:'유착성 관절낭염 (오십견)',ages:[45,68],w:9,fem:.65,jobs:['주부','미용사','회사원','식당 사장'],
   cc:['팔이 안 올라가서 머리를 못 감겠어요.','밤에 어깨가 쑤셔서 잠을 못 자요.','뒷주머니에 손이 안 들어가요.'],
   sx:['모든 방향으로 어깨 가동 범위 감소','남이 들어 올려도 안 올라감 (수동 운동 제한)','야간통'],
@@ -355,15 +359,15 @@ const DX=[
  {id:'discNeck',name:'디스크성 목통증 (경추 추간판성 통증)',ages:[22,62],w:7,jobs:['회사원','수험생','개발자','콜센터 상담사'],
   cc:['어깨가 돌덩이처럼 뭉쳐서 두통까지 와요.','목이랑 어깨가 항상 무겁고 뻐근해요.','고개 숙이고 일하면 목 뒤가 뻐근하게 아파요.'],
   sx:['목 뒤 중앙과 승모근 부위의 둔한 통증','오래 고개를 숙이면 악화 (굴곡 시 악화)','팔 저림 등 신경학적 이상 없음'],
-  eff:{epi:3,nerve:2.6,rf:1.3,med:1.3,pt:1.2,manual:1.2,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
+  eff:{epi:3,mbb:2.8,tfeb:2.4,nerve:2.4,root:1.5,rf:1.3,med:1.3,pt:1.2,manual:1.2,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
  {id:'discLow',name:'디스크성 요통 (요추 추간판성 통증)',ages:[22,62],w:7,jobs:['회사원','택배기사','택시기사','미용사'],
   cc:['허리가 묵직하게 아프고 오래 앉아 있으면 더 아파요.','허리를 숙이면 허리 가운데가 뻐근해요.','등허리 근육이 항상 뭉친 것 같아요.'],
   sx:['허리 가운데의 깊고 둔한 통증','오래 앉거나 허리를 숙이면 악화','다리 방사통·신경학적 이상 없음'],
-  eff:{epi:3,nerve:2.4,rf:1.3,med:1.3,pt:1.2,manual:1.3,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
+  eff:{epi:3,tfeb:2.6,mbb:2.4,nerve:2.2,psoas:1.6,root:1.5,rf:1.3,med:1.3,pt:1.2,manual:1.3,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
  {id:'phn',name:'대상포진 후 신경통',ages:[58,86],w:6,jobs:['은퇴 공무원','주부','택시기사','교회 장로'],
   cc:['두 달 전에 대상포진을 앓았는데 옆구리가 아직도 화끈거려요.','옷만 스쳐도 따갑고 아파요.'],
   sx:['피부절을 따라 띠 모양의 작열통','가벼운 접촉에도 통증 (이질통)','수포가 있던 자리의 흉터'],
-  eff:{nerve:3,epi:2.6,med:2,rf:1.5,tpi:.3,pt:.2,manual:-.5,eswt:-.3,refer:.5}},
+  eff:{nerve:3,root:2.8,tfeb:2.6,epi:2.6,med:2,rf:1.5,tpi:.3,pt:.2,manual:-.5,eswt:-.3,refer:.5}},
  {id:'cts',name:'수근관 증후군 (손목터널)',ages:[35,70],w:7,fem:.7,jobs:['미용사','주부','개발자','반찬가게 사장'],
   cc:['밤에 손이 저려서 자다가 깨요.','엄지랑 검지가 저리고 단추 채우기가 힘들어요.'],
   sx:['엄지~약지 절반 저림','손을 털면 좋아짐','손목 굴곡 검사 (Phalen) 양성'],
@@ -371,7 +375,7 @@ const DX=[
  {id:'occipital',name:'후두신경통',ages:[25,65],w:6,jobs:['회사원','수험생','소설가','버스기사'],
   cc:['뒷머리가 전기 오듯 찌릿찌릿 아파요.','머리 빗을 때 뒤통수가 따가워요.'],
   sx:['뒤통수 한쪽의 찌르는 듯한 통증','후두신경 지점 압통','두피 감각 과민'],
-  eff:{nerve:3,tpi:2,med:1.5,manual:1,pt:1,eswt:.5,prolo:.6,epi:.5,rf:1.2,refer:.4}},
+  eff:{nerve:3,mbb:2,tpi:2,med:1.5,manual:1,pt:1,eswt:.5,prolo:.6,epi:.5,rf:1.2,refer:.4}},
  /* red flags */
  {id:'cauda',name:'마미 증후군 의심 (응급)',ages:[35,70],w:1.2,flag:true,dflt:-2,jobs:['택배기사','회사원','건설 현장 반장'],
   cc:['허리 아프고 다리에 힘이 빠지는데... 소변이 잘 안 나와요.','어제부터 양쪽 다리가 저리고 엉덩이 감각이 이상해요.'],
@@ -786,7 +790,7 @@ ${tx.map((x,i)=>`${i+1}. ${x}`).join('\n')}
 [채점 항목]
 - dxScore: 진단은 게임이 객관식 순위(감별진단 순서)로 따로 채점하니 0을 넣어라. 플레이어의 진단 순위는 치료 계획을 이해하는 참고로만 써라.
 - txScore (0~100): 이 환자와 이 의원 여건에서 치료 계획의 적절성과 기대 효과. 레드 플래그를 놓치고 시술만 하면 0~10. 재진이면 이전 치료 반응을 반영하라: 잘 들은 치료를 반복하거나 이어가는 것은 타당하고, 효과 없던 치료를 그대로 반복하면 감점, 반응이 부족하면 단계적으로 치료를 바꾸거나 올린 것을 높게 평가하라.
-- usedTreatments: 실제 시행하는 치료·검사를 아래 키로 최대 4개 (가장 가까운 것으로 매핑). xray=X-ray 촬영, med=약 처방, pt=물리치료, manual=도수치료, eswt=체외충격파, tpi=통증유발점 주사, joint=관절강·점액낭 주사, prolo=프롤로·증식치료 주사, nerve=초음파 유도 신경차단(내측지 차단·선택적 신경근 차단·말초신경 차단·초음파 유도 경추 시술 포함), epi=C-arm 투시하 경막외 신경차단술, rf=고주파 열응고술, refer=상급병원·응급실 전원 또는 즉시 MRI 등 정밀검사 의뢰
+- usedTreatments: 실제 시행하는 치료·검사를 아래 키로 최대 4개 (가장 가까운 것으로 매핑). xray=X-ray 촬영, med=약 처방, pt=물리치료, manual=도수치료, eswt=체외충격파, tpi=통증유발점 주사, joint=관절강·점액낭 주사, prolo=프롤로·증식치료 주사, nerve=초음파 유도 신경차단(견갑상신경·후두신경·말초신경 차단, 초음파 유도 경추 시술), tfeb=C-arm 경추간공 경막외 차단술(TFEB, TFESI), root=C-arm 선택적 신경근 차단술(root block, SNRB), psoas=C-arm 요근구획 차단술(psoas compartment block, 요신경총 차단), mbb=C-arm 내측지 차단술·후관절 차단술(MBB, facet block), epi=C-arm 추궁간 경막외 차단술(ILEB, interlaminar)·미추 경막외, rf=고주파 열응고술, refer=상급병원·응급실 전원 또는 즉시 MRI 등 정밀검사 의뢰
 - referred: 전원이나 즉시 정밀검사 의뢰가 포함되면 true
 - overtreatment: 근거가 약한 비싼 비급여 치료를 끼워 넣었거나 치료를 과하게 겹쳤으면 true
 - feasible: 처방한 것을 이 의원에서 모두 할 수 있으면 true
@@ -952,7 +956,7 @@ function renderRoom(){
      <button class="btn primary" data-act="txdone" ${sel.length?'':'disabled'}>진료 완료</button></div>`;})()}`}`;
 }
 const DX_SUGGEST=['요추 추간판 탈출증 (HIVD)','경추 추간판 탈출증','디스크성 요통','디스크성 목통증','척추관 협착증','요추 후관절 증후군','오십견 (유착성 관절낭염)','회전근개 건병증','무릎 골관절염','족저근막염','테니스 엘보 (외측 상과염)','대상포진 후 신경통','수근관 증후군','후두신경통','압박골절 의심','마미 증후군 의심','척추 감염 의심','척추 전이암 의심'];
-const TX_CHIPS=['약 처방','물리치료','도수치료','체외충격파','TPI','관절강 주사','프롤로 주사','초음파 유도 신경차단','MBB','경막외 차단술','고주파 열응고술','MRI·상급병원 의뢰'];
+const TX_CHIPS=['약 처방','물리치료','도수치료','체외충격파','TPI','관절강 주사','프롤로 주사','초음파 유도 신경차단','TFEB','root block','psoas compartment block','MBB / facet block','ILEB (추궁간 경막외)','고주파 열응고술','MRI·상급병원 의뢰'];
 function ddxPicker(p,busy){const picks=p.picks||[];
   return`<div class="ddx"><div class="ddx-h"><h3 class="tx-h">진단 · 가장 의심되는 순서대로 눌러주세요 (최대 3개)</h3>${picks.length&&!busy?'<button class="btn sm ghost" data-act="ddxclear">다시 고르기</button>':''}</div>
    <div class="chips">${ddxOptions(p).map(x=>{const i=picks.indexOf(x);
