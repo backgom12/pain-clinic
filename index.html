@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<!-- PAIN_CLINIC_GAME build 2026-11-19T07:09:32.993Z -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<title>김원장 통증의학과</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: EMR-style clinic screen. Waiting room | exam room chart | treatment log. Stacks to one column on phones. */
+:root{
+  --paper:#eef3f2; --card:#fbfdfc; --ink:#14292c; --muted:#58706f; --line:#d3dfdd;
+  --teal:#0b746c; --teal-soft:#d8ece8; --on-teal:#ffffff;
+  --coral:#d4533c; --amber:#c98d10; --good:#2e8a4b; --bad:#c03a2a;
+  --scrim:rgba(10,25,27,.55); --shadow:0 12px 34px rgba(12,40,40,.14);
+  --f-display:'Do Hyeon','IBM Plex Sans KR','Malgun Gothic',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'Malgun Gothic',monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0d1819; --card:#132325; --ink:#e2eeec; --muted:#8ba5a3; --line:#243a3c;
+  --teal:#3bbfb0; --teal-soft:#123532; --on-teal:#06201d;
+  --coral:#f07b62; --amber:#f2bf4a; --good:#5ec47e; --bad:#f06a56;
+  --scrim:rgba(0,0,0,.65); --shadow:0 12px 34px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0d1819; --card:#132325; --ink:#e2eeec; --muted:#8ba5a3; --line:#243a3c;
+  --teal:#3bbfb0; --teal-soft:#123532; --on-teal:#06201d;
+  --coral:#f07b62; --amber:#f2bf4a; --good:#5ec47e; --bad:#f06a56;
+  --scrim:rgba(0,0,0,.65); --shadow:0 12px 34px rgba(0,0,0,.45); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+button{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.btn:hover:not(:disabled){border-color:var(--teal)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--teal);color:var(--on-teal);border-color:var(--teal);font-weight:700}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.cross{flex:none;width:38px;height:38px;background:var(--teal);clip-path:polygon(34% 0,66% 0,66% 34%,100% 34%,100% 66%,66% 66%,66% 100%,34% 100%,34% 66%,0 66%,0 34%,34% 34%)}
+.brand h1{font-size:28px;line-height:1.1}
+.sub{color:var(--muted);font-size:13px}
+.sub b{color:var(--teal);font-weight:700}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.stat .v{font-family:var(--f-display);font-size:23px;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v small{font-family:var(--f-body);font-size:12px;color:var(--muted);margin-left:4px}
+.neg{color:var(--bad)}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;background:var(--good);border-radius:3px;transition:width .4s}
+.bar i.mid{background:var(--amber)} .bar i.low{background:var(--bad)}
+.stars-mini{color:var(--amber);font-size:13px;letter-spacing:1px}
+
+/* main */
+.main{display:grid;grid-template-columns:270px minmax(0,1fr) 290px;gap:14px;align-items:start}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel>h2{font-size:19px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.panel>h2 span{font-family:var(--f-body);font-size:12px;color:var(--muted)}
+@media (max-width:1080px){.main{grid-template-columns:250px minmax(0,1fr)}.log{grid-column:1/-1}}
+@media (max-width:720px){.main{grid-template-columns:minmax(0,1fr)}.qlist{flex-direction:row!important;overflow-x:auto;padding-bottom:4px}.q{min-width:210px}}
+
+/* queue */
+.qlist{display:flex;flex-direction:column;gap:8px}
+.q{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;text-align:left;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper);cursor:pointer}
+.q:hover{border-color:var(--teal)}
+.q.sel{border-color:var(--teal);background:var(--teal-soft)}
+.q .av{font-size:26px;line-height:1;text-align:center}
+.q .info{min-width:0;display:flex;flex-direction:column;gap:3px}
+.q .info>span{display:block}
+.q .bar{display:block;height:4px;margin-top:2px}
+.q .bar i{display:block}
+.q .nm{font-weight:700;font-size:13.5px;display:flex;justify-content:space-between;gap:6px}
+.q .nm em{font-style:normal;font-weight:400;color:var(--muted);font-family:var(--f-mono);font-size:11.5px}
+.q .cc{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{color:var(--muted);font-size:13px;padding:10px 2px}
+.upcoming{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+
+/* room */
+.room{min-height:420px}
+.chart-head{display:flex;gap:14px;align-items:center}
+.avatar{font-size:46px;line-height:1;width:64px;height:64px;display:grid;place-items:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;flex:none}
+.who{min-width:0;display:flex;flex-direction:column;gap:5px}
+.who .name{font-family:var(--f-display);font-size:24px;line-height:1.1}
+.who .name small{font-family:var(--f-body);font-size:13px;color:var(--muted);margin-left:6px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:11.5px;border:1px solid var(--line);border-radius:20px;padding:1px 9px;color:var(--muted)}
+.tag.ok{border-color:var(--good);color:var(--good)}
+.tag.vip{border-color:var(--amber);color:var(--amber);font-weight:700}
+.tag.warn{border-color:var(--bad);color:var(--bad)}
+.cc-quote{margin:0;font-size:17px;line-height:1.5;padding:12px 14px;background:var(--paper);border-radius:10px;border-left:3px solid var(--teal)}
+.vas-wrap{display:flex;flex-direction:column;gap:5px}
+.vas-lbl{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.vas-lbl b{font-family:var(--f-mono);color:var(--ink);font-size:13px}
+.vas{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.vas i{height:10px;border-radius:2px;background:var(--line)}
+.vas i.g{background:var(--good)} .vas i.a{background:var(--amber)} .vas i.c{background:var(--coral)}
+.findings h3,.tx-h{font-size:15px;color:var(--muted)}
+.findings ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.dx-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--line);border-radius:10px;padding:9px 12px}
+.dx-line .dx{font-weight:700}
+.dx-line .unk{color:var(--muted);font-weight:400}
+.tx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px}
+.tx{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--card);cursor:pointer;transition:border-color .15s,transform .15s}
+.tx:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+.tx:disabled{opacity:.42;cursor:not-allowed}
+.tx .t{font-weight:700;font-size:13.5px}
+.tx .m{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tx .n{font-size:11.5px;color:var(--muted)}
+.tx .n.lock{color:var(--bad)}
+.tx.nc .t::after{content:"비급여";font-family:var(--f-body);font-weight:500;font-size:10px;color:var(--amber);border:1px solid var(--amber);border-radius:10px;padding:0 5px;margin-left:5px;vertical-align:2px}
+.tx.ref{border-style:dashed}
+.room-empty{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:20px 4px}
+.room-empty p{margin:0;color:var(--muted);max-width:46ch}
+.banner{font-size:13px;padding:8px 12px;border-radius:9px;background:var(--teal-soft);color:var(--ink)}
+.banner.warn{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+
+/* result */
+.result{display:flex;flex-direction:column;gap:12px;animation:pop .35s ease}
+@keyframes pop{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}
+.r-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.r-stars{font-size:30px;color:var(--amber);letter-spacing:2px}
+.r-stars .off{color:var(--line)}
+.r-money{font-family:var(--f-display);font-size:28px;color:var(--good)}
+.r-name{font-family:var(--f-display);font-size:20px}
+.vas-change{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.vas-change .arrow{font-family:var(--f-mono);color:var(--muted)}
+.review{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+.review cite{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:4px}
+.answer{font-size:13px;background:var(--paper);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.answer b{color:var(--teal)}
+
+/* log */
+.loglist{display:flex;flex-direction:column;gap:0;max-height:560px;overflow-y:auto}
+.le{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.le:last-child{border-bottom:0}
+.le .tm{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:1px}
+.le .good{color:var(--good)} .le .bad{color:var(--bad)} .le .st{color:var(--amber)}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;z-index:50;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:600px;max-height:calc(100vh - 32px);overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;animation:pop .3s ease}
+.modal.wide{max-width:760px}
+.modal h2{font-size:26px}
+.modal p{margin:0}
+.modal .lead{color:var(--muted)}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts .btn{text-align:left;padding:11px 14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:var(--muted)}
+.field input{font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.sumgrid .stat .v{font-size:21px}
+table.ledger{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.ledger td{padding:5px 0;border-bottom:1px solid var(--line)}
+table.ledger td:last-child{text-align:right;font-family:var(--f-mono);font-size:12.5px}
+table.ledger tr.total td{font-weight:700;border-bottom:0;padding-top:8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs .btn[aria-pressed="true"]{background:var(--teal-soft);border-color:var(--teal);font-weight:700}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.item{border:1px solid var(--line);border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--paper)}
+.item h3{font-size:17px}
+.item p{font-size:12.5px;color:var(--muted);flex:1}
+.item .price{font-family:var(--f-mono);font-size:12.5px}
+.item .own{color:var(--good);font-weight:700;font-size:13px}
+.item .ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item .cnt{font-family:var(--f-mono);font-size:13px;min-width:40px}
+.help h3{font-size:17px;margin-top:4px}
+.help ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:max(18px,calc(env(safe-area-inset-bottom,0px) + 12px));display:flex;flex-direction:column;gap:6px;align-items:center;z-index:60;pointer-events:none;width:min(92vw,420px)}
+.toast{background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:20px;font-size:13.5px;box-shadow:var(--shadow);animation:pop .25s ease;text-align:center}
+.tag.re{border-color:var(--teal);color:var(--teal);font-weight:700}
+.re-mark{font-size:10.5px;color:var(--teal);border:1px solid var(--teal);border-radius:8px;padding:0 4px;font-weight:500}
+.history{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.history h3{font-size:15px;color:var(--muted)}
+.hv{font-size:13px;display:flex;flex-direction:column;gap:2px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.hv-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hv-top span{color:var(--muted);font-size:12px}
+.hv .st{color:var(--amber)}
+.hv ol{margin:2px 0;padding-left:20px}
+.hv-vas{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.history .now{margin:0;font-size:13px}
+.history .unk{color:var(--muted)}
+.todo{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.todo legend{font-size:12px;color:var(--muted);padding:0;margin-bottom:5px}
+.todo legend small{margin-left:6px}
+.todo-row{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;align-items:center}
+.todo-row .num{font-family:var(--f-display);font-size:18px;color:var(--teal);text-align:center}
+.tag.cons,.re-mark.cons{border-color:var(--amber);color:var(--amber)}
+.xray-box{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:14px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:10px}
+.xray-box canvas{width:100%;max-width:220px;aspect-ratio:1;border-radius:6px;background:#000;display:block}
+.xray-box h3{font-size:15px}
+.xray-box p{margin:4px 0 0;font-size:13.5px}
+@media (max-width:520px){.xray-box{grid-template-columns:minmax(0,1fr)}}
+.scene{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+.scene-wrap{position:relative;width:100%;max-width:780px;margin:0 auto;aspect-ratio:320/150}
+.scene canvas{width:100%;height:100%;display:block;image-rendering:pixelated;border-radius:6px}
+.sl{position:absolute;font-size:10px;line-height:1.1;padding:2px 4px;border-radius:3px;background:rgba(20,40,44,.72);color:#fff;pointer-events:none;white-space:nowrap}
+@media (max-width:520px){.sl{font-size:8.5px;padding:1px 3px}}
+.le .assoc{font-size:10.5px;color:var(--teal);border:1px solid var(--teal);border-radius:8px;padding:0 4px}
+.auto-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.auto-log thead td{font-size:11.5px;color:var(--muted)}
+.auto-log td{padding-right:10px;white-space:nowrap}
+.tx[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft);box-shadow:inset 0 0 0 1px var(--teal)}
+.tx[aria-pressed="true"] .t::before{content:"✓ ";color:var(--teal)}
+.tx-done{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;bottom:max(8px,env(safe-area-inset-bottom,0px));background:var(--card);border:1px solid var(--teal);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);z-index:5}
+.tx-done span{min-width:0;font-size:13.5px}
+.tx-done .unk{color:var(--muted)}
+.ddx{display:flex;flex-direction:column;gap:8px}
+.ddx-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.chip .rank{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--on-teal);color:var(--teal);font-size:11px;margin-right:5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:4px 11px;cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--teal)}
+.chip[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal);font-weight:700}
+.chip.again{border-style:dashed;border-color:var(--teal);color:var(--teal)}
+.diffs{display:flex;flex-direction:column;gap:8px}
+.diff{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:var(--paper);cursor:pointer}
+.diff:hover{border-color:var(--teal)}
+.diff.on{border-color:var(--teal);background:var(--teal-soft);box-shadow:inset 0 0 0 1px var(--teal)}
+.diff .dn{font-family:var(--f-display);font-size:19px}
+.diff .dd{font-size:13px}
+.diff .dm{font-size:11.5px;color:var(--muted);font-family:var(--f-mono)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .btn[aria-pressed="true"]{background:var(--teal-soft);border-color:var(--teal);font-weight:700}
+.mode-note{margin:0;font-size:12.5px;color:var(--muted)}
+.ai-box{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper)}
+.ai-box textarea,.ai-box input{font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:100%;resize:vertical}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.thinking{font-size:13px;color:var(--teal);animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{50%{opacity:.45}}
+.star-why{font-size:12.5px;color:var(--muted);font-family:var(--f-body)}
+.star-why b{color:var(--amber)}
+.ai-eval{border:1px solid var(--teal);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.ai-eval h3{font-size:16px;color:var(--teal)}
+.ai-eval p{margin:0;font-size:14px}
+.ai-eval .lead{font-size:12.5px;color:var(--muted)}
+.ai-eval .mine{font-size:12.5px;color:var(--muted)}
+.scores{display:flex;gap:16px;font-size:13px}
+.scores b{font-family:var(--f-display);font-size:24px;color:var(--ink);margin-left:4px}
+.scores small{color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap" id="app"></div>
+<div id="modal-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+const SAVE_KEY = 'painclinic-save-v1';
+const app = document.getElementById('app');
+const mroot = document.getElementById('modal-root');
+const R = (a,b)=>a+Math.random()*(b-a), RI=(a,b)=>Math.floor(R(a,b+1)), pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const val=x=>typeof x==='function'?x(state):x;
+function won(n){const neg=n<0;n=Math.abs(Math.round(n));let s;
+  if(n>=1e8)s=(n/1e8).toFixed(2).replace(/\.?0+$/,'')+'억';
+  else if(n>=1e6)s=Math.round(n/1e4).toLocaleString('ko-KR')+'만';
+  else if(n>=1e4)s=(n/1e4).toFixed(1).replace(/\.0$/,'')+'만';
+  else s=n.toLocaleString('ko-KR');
+  return (neg?'-':'')+s+'원';}
+const clock=t=>String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+const DOW=['월','화','수','목','금','토','일'];
+const dowOf=d=>(d-1)%7;
+const starStr=n=>'★'.repeat(n)+'<span class="off">'+'★'.repeat(5-n)+'</span>';
+
+/* ---------- treatments ---------- */
+const TX={
+  med:{name:'약 처방',time:5,fat:1,price:8000,cov:true,note:'소염진통제·근이완제'},
+  pt:{name:'물리치료',time:5,fat:1,price:20000,cov:true,unit:1,note:'물리치료사 · 온열·전기 치료'},
+  manual:{name:'도수치료',time:5,fat:1,price:100000,cov:false,unit:2,req:'manualRoom',note:'물리치료사 · 도수치료실'},
+  eswt:{name:'체외충격파',time:5,fat:1,price:80000,cov:false,unit:1,req:'eswt',note:'물리치료사 · 힘줄·근막 질환'},
+  tpi:{name:'통증유발점 주사',time:10,fat:3,price:30000,cov:true,inj:true,proc:true,note:'근막 압통점 주사'},
+  joint:{name:'관절강 주사',time:10,fat:3,price:50000,cov:true,inj:true,proc:true,note:'관절·점액낭 주사'},
+  prolo:{name:'프롤로 주사',time:15,fat:4,price:80000,cov:false,inj:true,proc:true,note:'인대·힘줄 증식치료'},
+  nerve:{name:'초음파 유도 신경차단',time:15,fat:5,price:90000,cov:true,inj:true,proc:true,req:'us',note:'말초신경·신경근 차단'},
+  epi:{name:'경막외 신경차단술',time:20,fat:8,price:150000,cov:true,proc:true,req:'carm',radio:true,note:'C-arm 투시하 · 방사선사 필요'},
+  rf:{name:'고주파 열응고술',time:30,fat:10,price:350000,cov:false,proc:true,req:'rf',radio:true,note:'후관절·무릎 신경 소작'},
+  xray:{name:'X-ray 촬영',time:5,fat:1,price:12000,cov:true,req:'xray',radio:true,note:'방사선사 촬영'},
+  refer:{name:'상급병원 전원',time:5,fat:1,price:0,cov:true,note:'진료의뢰서 작성'}
+};
+const TX_ORDER=['med','pt','manual','eswt','tpi','joint','prolo','nerve','epi','rf','refer'];
+const REQ_NAME={us:'초음파',eswt:'체외충격파 기기',carm:'C-arm',rf:'고주파 장비',xray:'X-ray',manualRoom:'도수치료실'};
+const UNIT_PER_PT=16,MANUAL_PER_ROOM=14,ESWT_PER_MACHINE=15;
+/* 실제 수가 수준에 맞춰 모든 진료비를 1.5배로 */
+const PRICE_X=1.5;
+Object.values(TX).forEach(t=>{t.price=Math.round(t.price*PRICE_X);});
+const CONSULT_FEE=Math.round(15000*PRICE_X);
+
+/* ---------- diagnoses ---------- */
+const DX=[
+ {id:'neck',name:'경추 추간판 탈출증 (목디스크)',ages:[30,62],w:10,jobs:['개발자','회사원','웹툰 작가','택배기사'],
+  cc:['목이 뻐근하고 오른팔이 찌릿찌릿 저려요.','고개를 뒤로 젖히면 팔까지 전기가 오는 것 같아요.','손가락 끝이 저려서 마우스 잡기가 힘들어요.'],
+  sx:['한쪽 팔·손가락으로 뻗치는 저림','목을 뒤로 젖히면 방사통 악화 (Spurling 검사 양성)','어깨뼈 안쪽 통증'],
+  eff:{epi:3,nerve:2.4,med:1.2,pt:1,manual:1,tpi:.6,prolo:.5,rf:1,refer:.5}},
+ {id:'lumbar',name:'요추 추간판 탈출증 (허리디스크)',ages:[25,60],w:12,jobs:['택배기사','건설 현장 반장','회사원','택시기사'],
+  cc:['허리도 아픈데 왼쪽 다리가 당겨서 못 걷겠어요.','엉덩이부터 종아리까지 저리고 쑤셔요.','앉아 있으면 다리가 더 저려요.'],
+  sx:['한쪽 다리로 뻗치는 방사통','하지직거상 검사 45°에서 양성','기침·재채기 할 때 악화'],
+  eff:{epi:3,nerve:2.4,manual:1.3,med:1.1,pt:1,rf:.8,tpi:.5,prolo:.4,refer:.5}},
+ {id:'stenosis',name:'척추관 협착증',ages:[62,86],w:9,jobs:['은퇴 교사','재래시장 상인','아파트 경비원','주부'],
+  cc:['조금만 걸어도 다리가 터질 것 같아서 쉬었다 가요.','시장 한 바퀴를 못 돌아요. 앉으면 좀 괜찮고요.','다리가 저리고 힘이 없어요.'],
+  sx:['걸을 때 양쪽 다리 저림 (신경인성 파행)','허리를 숙이면 증상 완화','5분 이상 걷기 어려움'],
+  eff:{epi:3,nerve:2,rf:1.4,med:1.4,pt:1,manual:.4,tpi:.4,prolo:.5,refer:.8}},
+ {id:'facet',name:'요추 후관절 증후군',ages:[40,76],w:8,jobs:['골프 동호회 회장','회사원','주부','요가 강사'],
+  cc:['아침에 일어나면 허리가 뻣뻣해서 한참 걸려요.','허리를 뒤로 젖히면 콕콕 찔러요.','오래 서 있으면 허리 아래쪽이 아파요.'],
+  sx:['허리를 뒤로 젖히거나 돌릴 때 통증','다리 방사통은 없음','척추 바로 옆 국소 압통'],
+  eff:{nerve:3,manual:2,pt:1.5,rf:1.5,tpi:1.1,med:1,epi:1.2,prolo:1.2,eswt:.6,joint:.3,refer:.2}},
+ {id:'frozen',name:'유착성 관절낭염 (오십견)',ages:[45,68],w:9,fem:.65,jobs:['주부','미용사','회사원','식당 사장'],
+  cc:['팔이 안 올라가서 머리를 못 감겠어요.','밤에 어깨가 쑤셔서 잠을 못 자요.','뒷주머니에 손이 안 들어가요.'],
+  sx:['모든 방향으로 어깨 가동 범위 감소','남이 들어 올려도 안 올라감 (수동 운동 제한)','야간통'],
+  eff:{joint:3,nerve:2.3,manual:2,pt:1.2,med:1,prolo:1,eswt:.8,tpi:.5,rf:.8,refer:.3}},
+ {id:'rotator',name:'회전근개 건병증',ages:[35,70],w:9,jobs:['배드민턴 동호인','도배사','요리사','어린이집 교사'],
+  cc:['팔을 옆으로 들 때 어깨가 찌릿해요.','선반 위 물건을 꺼낼 때 아파요.','어깨 앞쪽이 욱신거려요.'],
+  sx:['팔을 60~120° 들 때만 통증 (painful arc)','남이 들어 올리면 끝까지 올라감','무거운 물건 들 때 악화'],
+  eff:{prolo:3,eswt:2.5,joint:2,pt:1.5,manual:1,med:1,nerve:1.3,tpi:.6,rf:.5,refer:.3}},
+ {id:'knee',name:'무릎 골관절염',ages:[58,86],w:11,fem:.65,jobs:['재래시장 상인','주부','텃밭 농부','아파트 경비원'],
+  cc:['계단 내려갈 때 무릎이 시큰해요.','무릎이 붓고 앉았다 일어나기가 힘들어요.','비 오는 날이면 무릎이 쑤셔요.'],
+  sx:['무릎 관절 부종','굽힐 때 사각사각 염발음','오래 서 있으면 악화'],
+  eff:{joint:3,prolo:2.4,rf:2.2,nerve:2,med:1.6,pt:1.4,eswt:1,manual:.6,tpi:.4,refer:.4}},
+ {id:'plantar',name:'족저근막염',ages:[30,65],w:8,jobs:['마라톤 동호인','간호사','마트 직원','교사'],
+  cc:['아침 첫발 디딜 때 발뒤꿈치가 찢어질 것 같아요.','오래 앉아 있다 일어나면 발바닥이 아파요.'],
+  sx:['발뒤꿈치 안쪽 압통','자고 일어난 첫 걸음에 통증','발가락을 젖히면 악화'],
+  eff:{eswt:3,prolo:2.2,joint:1.2,pt:1,med:1,manual:.6,tpi:.6,nerve:.8,rf:.3,refer:.2}},
+ {id:'elbow',name:'외측 상과염 (테니스 엘보)',ages:[30,65],w:8,jobs:['요리사','테니스 동호인','주부','목수'],
+  cc:['프라이팬 들 때 팔꿈치 바깥쪽이 아파요.','걸레 짤 때 팔꿈치가 찌릿해요.','악수만 해도 아파요.'],
+  sx:['팔꿈치 바깥 뼈 압통','손목을 젖히며 버틸 때 통증','물건을 쥘 때 악화'],
+  eff:{eswt:3,prolo:3,joint:1.2,pt:1,med:1,tpi:1,manual:.8,nerve:.8,rf:.3,refer:.2}},
+ {id:'discNeck',name:'디스크성 목통증 (경추 추간판성 통증)',ages:[22,62],w:7,jobs:['회사원','수험생','개발자','콜센터 상담사'],
+  cc:['어깨가 돌덩이처럼 뭉쳐서 두통까지 와요.','목이랑 어깨가 항상 무겁고 뻐근해요.','고개 숙이고 일하면 목 뒤가 뻐근하게 아파요.'],
+  sx:['목 뒤 중앙과 승모근 부위의 둔한 통증','오래 고개를 숙이면 악화 (굴곡 시 악화)','팔 저림 등 신경학적 이상 없음'],
+  eff:{epi:3,nerve:2.6,rf:1.3,med:1.3,pt:1.2,manual:1.2,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
+ {id:'discLow',name:'디스크성 요통 (요추 추간판성 통증)',ages:[22,62],w:7,jobs:['회사원','택배기사','택시기사','미용사'],
+  cc:['허리가 묵직하게 아프고 오래 앉아 있으면 더 아파요.','허리를 숙이면 허리 가운데가 뻐근해요.','등허리 근육이 항상 뭉친 것 같아요.'],
+  sx:['허리 가운데의 깊고 둔한 통증','오래 앉거나 허리를 숙이면 악화','다리 방사통·신경학적 이상 없음'],
+  eff:{epi:3,nerve:2.4,rf:1.3,med:1.3,pt:1.2,manual:1.3,tpi:.6,prolo:.6,eswt:.4,joint:0,refer:.3}},
+ {id:'phn',name:'대상포진 후 신경통',ages:[58,86],w:6,jobs:['은퇴 공무원','주부','택시기사','교회 장로'],
+  cc:['두 달 전에 대상포진을 앓았는데 옆구리가 아직도 화끈거려요.','옷만 스쳐도 따갑고 아파요.'],
+  sx:['피부절을 따라 띠 모양의 작열통','가벼운 접촉에도 통증 (이질통)','수포가 있던 자리의 흉터'],
+  eff:{nerve:3,epi:2.6,med:2,rf:1.5,tpi:.3,pt:.2,manual:-.5,eswt:-.3,refer:.5}},
+ {id:'cts',name:'수근관 증후군 (손목터널)',ages:[35,70],w:7,fem:.7,jobs:['미용사','주부','개발자','반찬가게 사장'],
+  cc:['밤에 손이 저려서 자다가 깨요.','엄지랑 검지가 저리고 단추 채우기가 힘들어요.'],
+  sx:['엄지~약지 절반 저림','손을 털면 좋아짐','손목 굴곡 검사 (Phalen) 양성'],
+  eff:{nerve:3,joint:2,prolo:1.2,med:1,pt:1,eswt:.8,manual:.6,tpi:.3,rf:.3,refer:.6}},
+ {id:'occipital',name:'후두신경통',ages:[25,65],w:6,jobs:['회사원','수험생','소설가','버스기사'],
+  cc:['뒷머리가 전기 오듯 찌릿찌릿 아파요.','머리 빗을 때 뒤통수가 따가워요.'],
+  sx:['뒤통수 한쪽의 찌르는 듯한 통증','후두신경 지점 압통','두피 감각 과민'],
+  eff:{nerve:3,tpi:2,med:1.5,manual:1,pt:1,eswt:.5,prolo:.6,epi:.5,rf:1.2,refer:.4}},
+ /* red flags */
+ {id:'cauda',name:'마미 증후군 의심 (응급)',ages:[35,70],w:1.2,flag:true,dflt:-2,jobs:['택배기사','회사원','건설 현장 반장'],
+  cc:['허리 아프고 다리에 힘이 빠지는데... 소변이 잘 안 나와요.','어제부터 양쪽 다리가 저리고 엉덩이 감각이 이상해요.'],
+  sx:['회음부 감각 저하 (안장 부위 마비감)','배뇨 장애','양측 다리 근력 저하'],
+  eff:{refer:3}},
+ {id:'fracture',name:'골다공증성 압박골절 의심',ages:[70,88],w:1.5,flag:true,dflt:-1,fem:.8,jobs:['주부','은퇴 교사'],
+  cc:['엉덩방아를 찧고 나서 허리를 못 펴겠어요.','돌아눕기만 해도 허리가 끊어질 것 같아요.'],
+  sx:['척추뼈를 두드리면 극심한 통증','골다공증 약 복용 중','넘어진 뒤 생긴 급성 통증'],
+  eff:{refer:3,med:.5}},
+ {id:'tumor',name:'척추 전이암 의심',ages:[50,80],w:1,flag:true,dflt:-2,jobs:['은퇴 공무원','식당 사장','주부'],
+  cc:['누워서 쉬어도 허리가 아프고, 요즘 살이 많이 빠졌어요.'],
+  sx:['쉬거나 밤에도 계속되는 통증','3개월간 체중 7kg 감소','2년 전 폐암 수술 병력'],
+  eff:{refer:3}},
+ {id:'infect',name:'척추 감염 의심',ages:[45,80],w:1,flag:true,dflt:-2,jobs:['택시기사','주부','농부'],
+  cc:['허리가 계속 아프고 열이 나요.','다른 병원에서 주사 맞고 나서 더 아파요.'],
+  sx:['38.2℃ 발열','최근 척추 주사 시술 이력','가만히 있어도 계속되는 통증'],
+  eff:{refer:3}}
+];
+const DXMAP=Object.fromEntries(DX.map(d=>[d.id,d]));
+/* 객관식 감별진단: 앞의 3개가 모범 순위(1→3), 나머지는 그럴듯한 오답 보기 */
+const DDX={
+ neck:['경추 추간판 탈출증 (신경근병증)','경추 추간공 협착증','흉곽출구 증후군','수근관 증후군','디스크성 목통증','회전근개 질환'],
+ lumbar:['요추 추간판 탈출증','요추 척추관 협착증','이상근 증후군','디스크성 요통','천장관절 증후군','고관절 골관절염'],
+ stenosis:['요추 척추관 협착증','말초동맥질환 (혈관성 파행)','요추 전방전위증','요추 추간판 탈출증','고관절 골관절염','당뇨병성 신경병증'],
+ facet:['요추 후관절 증후군','디스크성 요통','천장관절 증후군','요추 추간판 탈출증','요추 염좌','요추 척추관 협착증'],
+ frozen:['오십견 (유착성 관절낭염)','석회성 건염','견관절 골관절염','회전근개 건병증','회전근개 파열','이두근 건염'],
+ rotator:['회전근개 건병증','견봉하 점액낭염','회전근개 파열','석회성 건염','오십견 (유착성 관절낭염)','이두근 건염'],
+ knee:['무릎 골관절염','반월상 연골판 파열','거위발 건염','슬개대퇴 통증 증후군','통풍성 관절염','류마티스 관절염'],
+ plantar:['족저근막염','지방패드 위축','종골 피로골절','아킬레스 건염','족근관 증후군'],
+ elbow:['외측 상과염 (테니스 엘보)','요골관 증후군','경추 신경근병증 (C6)','내측 상과염','팔꿈치 골관절염'],
+ discNeck:['디스크성 목통증','경추 후관절 증후군','경추 염좌','경추 추간판 탈출증 (신경근병증)','긴장성 두통'],
+ discLow:['디스크성 요통','요추 후관절 증후군','천장관절 증후군','요추 추간판 탈출증','요추 염좌'],
+ phn:['대상포진 후 신경통','늑간 신경통','흉추 추간판 탈출증','당뇨병성 신경병증','늑골 골절'],
+ cts:['수근관 증후군','경추 신경근병증 (C6)','다발성 신경병증','주관 증후군','드퀘르뱅 건초염'],
+ occipital:['후두신경통','경추성 두통','긴장성 두통','편두통','경추 후관절 증후군'],
+ cauda:['마미 증후군','요추 추간판 탈출증','요추 척추관 협착증','요로 감염','척수 경색'],
+ fracture:['골다공증성 압박골절','척추 전이암 (병적 골절)','요추 염좌','디스크성 요통','요추 후관절 증후군'],
+ tumor:['척추 전이암','척추 감염','골다공증성 압박골절','디스크성 요통','요추 척추관 협착증'],
+ infect:['척추 감염 (화농성 척추염)','척추 전이암','신우신염','시술 후 일시적 통증','요추 추간판 탈출증']
+};
+function ddxOptions(p){const L=DDX[p.dx]||[];const r=rng(p.id*31+5);return L.map(x=>({x,k:r()})).sort((a,b)=>a.k-b.k).map(o=>o.x);}
+function ddxScore(p){const C=(DDX[p.dx]||[]).slice(0,3),W=[60,25,15];let s=0;
+  (p.picks||[]).slice(0,3).forEach((x,i)=>{if(C[i]===x)s+=W[i];else if(C.includes(x))s+=W[i]*.5;});return Math.round(s);}
+const effOf=(d,tid)=>d.eff[tid]!==undefined?d.eff[tid]:(d.flag?d.dflt:0);
+const bestTx=d=>Object.entries(d.eff).sort((a,b)=>b[1]-a[1])[0][0];
+
+/* ---------- names ---------- */
+const SUR=['김','이','박','최','정','강','조','윤','장','임','한','오','서','신','권','황','배','문'];
+const NAMES={F:{old:['영순','말순','순자','정희','옥자','미자','춘자','영자','경숙','명숙'],mid:['은정','미영','지연','혜진','수진','선영','경아','현주'],young:['지은','수빈','서연','민지','하은','유진']},
+ M:{old:['영수','철수','상철','병호','종구','만식','덕수','용길'],mid:['성민','재훈','동현','준호','상훈','정우','태영'],young:['민준','지훈','도윤','현우','시우','건우']}};
+function avatarOf(age,sex){if(age>=65)return sex==='F'?'👵':'👴';if(age>=40)return sex==='F'?'👩':'👨';return sex==='F'?'👱‍♀️':'🧑';}
+
+/* ---------- shop ---------- */
+const EQUIP=[
+ {k:'us',name:'초음파 진단기',cost:4e7,desc:'초음파 유도 신경차단술 가능. 모든 주사 정확도가 올라가요.'},
+ {k:'carm',name:'C-arm 투시 장비',cost:9e7,desc:'방사선 차폐 시술실 포함. 경막외 신경차단술 가능.'},
+ {k:'xray',name:'X-ray (DR)',cost:6e7,desc:'정밀 진찰 때 X-ray를 함께 찍어요. 촬영료가 붙어요.'},
+ {k:'eswt',name:'체외충격파 기기',cost:4.5e7,max:3,desc:`1대당 하루 ${ESWT_PER_MACHINE}회. 물리치료사가 시행해요.`},
+ {k:'manualRoom',name:'도수치료실',cost:2e7,max:3,desc:`방 1개당 하루 도수치료 ${MANUAL_PER_ROOM}회. 물리치료사도 함께 늘려야 해요.`},
+ {k:'rf',name:'고주파 열응고 장비',cost:3.5e7,req:'carm',desc:'후관절·무릎 신경 고주파 열응고술 가능.'},
+ {k:'remodel',name:'대기실 리모델링',cost:15e6,desc:'환자 인내심 +15분, 만족도 소폭 상승.'},
+ {k:'chair',name:'원장실 안마의자',cost:5e6,desc:'점심시간 체력 회복 +15.'},
+ {k:'sign',name:'LED 간판 교체',cost:8e6,desc:'지나가는 사람 눈에 잘 띄어요. 하루 환자 +1.'}
+];
+/* wage = monthly total labor cost (incl. 4대보험) / 25 working days */
+const STAFF=[
+ {k:'reception',name:'원무과 직원',wage:112000,max:3,min:1,desc:'접수·수납. 1명 늘 때마다 환자 인내심 +12분. (월 약 280만원)'},
+ {k:'counselor',name:'상담실장',wage:160000,max:1,min:0,desc:'비급여 설명 담당. 실손 없는 환자의 불만이 줄고 비급여 만족도가 올라요. (월 약 400만원)'},
+ {k:'nurse',name:'간호사',wage:152000,max:3,min:1,desc:'시술 보조. 1명 늘 때마다 주사·시술 시간 -2분. (월 약 380만원)'},
+ {k:'pt',name:'물리치료사',wage:140000,max:5,min:0,desc:`물리치료·도수치료·체외충격파 담당. 1명당 하루 ${UNIT_PER_PT}단위 (물리치료·체외충격파 1, 도수 2). (월 약 350만원)`},
+ {k:'assoc',name:'부원장',wage:800000,max:4,min:0,desc:'대기 환자를 따로 진료해요. 실력은 원장님의 85% 정도, 레드 플래그는 80%만 잡아요. 1명 이상 있으면 자동 운영을 켤 수 있어요. (월 약 2,000만원)'},
+ {k:'radio',name:'방사선사',wage:152000,max:2,min:0,desc:'X-ray 촬영과 C-arm 시술에 꼭 필요해요. (월 약 380만원)'}
+];
+const OPEX=120000; /* 전기·소모품·EMR·세무·장비 유지보수: 월 약 300만원 */
+const GROW={
+ youtube:{name:'개원일기 쇼츠 채널',costs:[3e6,8e6,15e6],desc:'원장님이 직접 찍는 개원일기. 단계마다 하루 환자 +2.'},
+ seminar:{name:'통증학회 연수',costs:[3e6,7e6,12e6],desc:'단계마다 시술 시간 -2분, 치료 효과 상승.'}
+};
+const RENT=260000; /* 임대료+관리비 월 약 650만원 */
+const TITLES=[[0,0,'갓 개원한 원장'],[80,3.6,'동네 단골 의원'],[250,4.0,'우리 동네 명의'],[600,4.3,'구에서 소문난 명의'],[1200,4.5,'도시 대표 통증 명의'],[2500,4.7,'대한민국 통증 명의']];
+
+/* ---------- reviews ---------- */
+const REV={5:['원장님 설명이 친절하고 한 번에 좋아졌어요!','몇 달 고생했는데 살 것 같아요. 가족들도 데려올게요.','여기 진짜 명의입니다.','주사 하나도 안 아프게 놔주세요. 효과 최고!'],
+ 4:['많이 좋아졌어요. 한두 번 더 오면 될 듯!','친절하고 깔끔해요.','대기는 좀 있었지만 효과 좋아요.'],
+ 3:['조금 나아진 것 같기도 하고...','무난해요.','효과는 좀 지켜봐야겠어요.'],
+ 2:['별로 차이를 모르겠어요.','돈만 쓴 느낌이에요.'],
+ 1:['오히려 더 아파졌어요.','다시는 안 갑니다.']};
+
+/* ---------- events ---------- */
+function addMod(val,days,label){state.mods.push({val,days,label});}
+const EVENTS=[
+ {id:'rival',cond:s=>s.day>6,title:'길 건너에 경쟁 의원 개원',text:'맞은편 상가에 "척척 정형통증의원"이 문을 열었어요. 개업 기념으로 도수치료 반값 이벤트를 한대요.',
+  opts:[{label:'맞불 홍보 (-500만원)',cost:5e6,fx:()=>{},res:'블로그·전단지 홍보로 환자 이탈을 막았어요.'},
+        {label:'실력으로 승부한다',fx:()=>addMod(-3,5,'경쟁 의원 개원'),res:'5일 동안 하루 환자가 3명 줄어요.'}]},
+ {id:'viral',cond:s=>s.day>2,title:s=>s.youtube?'개원일기 쇼츠가 터졌어요!':'맘카페에 칭찬글이 올라왔어요',
+  text:s=>s.youtube?'원장님이 직접 찍은 개원일기 쇼츠가 조회수 30만을 넘었어요.':'"통증의학과 원장님이 친절하다"는 글이 지역 맘카페 인기글에 올랐어요.',
+  opts:[{label:'좋았어!',fx:s=>addMod(s.youtube?5:3,3,'입소문'),res:s=>`3일 동안 하루 환자가 늘어요.`}]},
+ {id:'rain',cond:()=>true,title:'장마 시작',text:'비가 오니 무릎·어깨 아픈 어르신들이 몰려와요.',
+  opts:[{label:'우산꽂이부터 꺼내자',fx:(s,T)=>{T.extra+=3;T.boost={knee:3,frozen:2,stenosis:1.5};},res:'오늘은 관절 환자가 많아요.'}]},
+ {id:'pharma',cond:()=>true,title:'제약회사 영업사원 방문',text:'점심 도시락과 신제품 소개 자료를 들고 왔어요.',
+  opts:[{label:'도시락 감사히 받기 (체력 +15)',fx:s=>{s.fatigue=Math.min(maxFat(),s.fatigue+15);},res:'든든하게 먹고 힘이 났어요.'},
+        {label:'정중히 거절 (평판 소폭 상승)',fx:s=>{s.rating=clamp(s.rating+.02,1,5);},res:'깔끔한 원장님이라는 소문이 났어요.'}]},
+ {id:'audit',cond:s=>s.day>10,title:'심평원 현지조사 통보',text:'건강보험심사평가원에서 최근 진료기록을 확인하겠다고 연락이 왔어요.',
+  opts:[{label:'진료기록 제출',fx:s=>{if(s.overtreat>=3){const fine=s.overtreat*2e6;s.money-=fine;s.rating=clamp(s.rating-.1,1,5);s._res=`과잉진료 ${s.overtreat}건 적발. 환수금 ${won(fine)}을 냈고 평점이 떨어졌어요.`;}else{s.rating=clamp(s.rating+.03,1,5);s._res='깔끔한 진료기록으로 무사 통과! 평점이 조금 올랐어요.';}s.overtreat=0;},res:s=>s._res}]},
+ {id:'leave',cond:()=>true,title:'간호 선생님 연차',text:'간호조무사 한 분이 오늘 연차예요. 접수가 느려져서 환자들이 덜 기다려줄 거예요.',
+  opts:[{label:'오늘은 내가 더 뛴다',fx:(s,T)=>{T.patienceMod-=15;},res:'오늘은 환자 인내심이 15분 줄어요.'}]},
+ {id:'vip',once:true,cond:s=>s.day>3,title:'건물주 어르신 내원 예정',text:'건물주 최회장님이 무릎이 아프시대요. 오전 10시에 오신답니다. 별 다섯 개 받으면 임대료를 깎아주실지도?',
+  opts:[{label:'정성껏 모시겠습니다',fx:(s,T)=>{T.vip=true;},res:'10시에 VIP 환자가 와요.'}]},
+ {id:'pharmacy',once:true,cond:s=>s.day>2,title:'1층에 약국 오픈',text:'건물 1층에 약국이 새로 문을 열었어요. 처방전 들고 바로 내려가면 되니 환자들이 편해해요.',
+  opts:[{label:'개업 축하 화분 보내기',fx:s=>{s.pharmacy=true;},res:'이제 약 처방 만족도가 올라가요.'}]},
+ {id:'holiday',cond:s=>dowOf(s.day)===4,title:'명절 연휴 전날',text:'연휴 전에 치료받으려는 환자들로 아침부터 붐벼요.',
+  opts:[{label:'오늘 각오하자',fx:(s,T)=>{T.extra+=6;},res:'오늘은 환자가 6명 더 와요.'}]},
+ {id:'cold',cond:()=>true,title:'원장님 감기 기운',text:'목이 칼칼하고 몸이 무거워요.',
+  opts:[{label:'수액 맞고 버틴다 (-10만원, 체력 -5)',fx:s=>{s.money-=1e5;s.fatigue=Math.max(0,s.fatigue-5);},res:'수액 덕분에 좀 낫네요.'},
+        {label:'그냥 버틴다 (체력 -20)',fx:s=>{s.fatigue=Math.max(0,s.fatigue-20);},res:'오늘은 컨디션 관리가 중요해요.'}]},
+ {id:'tv',cond:s=>s.rating>=4.3,title:'지역 방송 인터뷰 요청',text:'지역 방송 "우리 동네 명의" 코너에서 인터뷰 요청이 왔어요.',
+  opts:[{label:'출연한다',fx:()=>addMod(3,7,'방송 출연'),res:'일주일 동안 하루 환자가 3명 늘어요.'},{label:'진료에 집중하겠습니다',fx:()=>{},res:'겸손한 원장님!'}]},
+ {id:'lecture',cond:s=>s.day>8&&dowOf(s.day)<5,title:'학회 증례 발표 초청',text:'통증학회에서 증례 발표를 해달래요. 오전 진료를 비워야 해요.',
+  opts:[{label:'발표하고 온다 (경험치 +80, 오후 진료만)',fx:(s,T)=>{gainXp(80);T.open=840;T.time=840;T.lunchDone=true;},res:'오후 2시부터 진료를 시작해요.'},
+        {label:'환자가 먼저죠',fx:()=>{},res:'정상 진료합니다.'}]}
+];
+
+/* ---------- state ---------- */
+let state=null;
+const maxFat=()=>100+(state.level-1)*5;
+const xpNext=()=>100+state.level*90;
+const DIFFS={
+ normal:{name:'노말',loan:5e8,money:6e7,rate:.05,limit:-5e7,patience:0,
+   owned:{us:true,carm:true,xray:true,eswt:1,manualRoom:1},staff:{reception:1,counselor:1,nurse:1,pt:2,radio:1},
+   desc:'개원 자금 5억(대출). C-arm·초음파·X-ray·체외충격파·도수치료실과 직원 6명을 갖추고 시작해요.'},
+ hard:{name:'어려움',loan:3e8,money:5e7,rate:.05,limit:-3e7,patience:0,
+   owned:{xray:true},staff:{reception:1,counselor:0,nurse:1,pt:1,radio:1},
+   desc:'개원 자금 3억(대출). X-ray만 있고 직원 4명. 초음파·C-arm·체외충격파·도수치료실은 벌어서 하나씩 들여야 해요.'},
+ hardcore:{name:'하드코어',loan:6e8,money:2e7,rate:.07,limit:-2e7,patience:-10,
+   owned:{xray:true},staff:{reception:1,counselor:0,nurse:1,pt:1,radio:1},
+   desc:'어려움과 같은 구성에 기존 빚 3억까지 안고 시작해요. 대출 6억(금리 7%), 운영 자금 2,000만, 환자들도 덜 기다려줘요.'}
+};
+DIFFS.gold={name:'금수저',loan:0,money:5e8,rate:.05,limit:-1e8,patience:10,rating:4.2,auto:true,
+   owned:{us:true,carm:true,xray:true,rf:true,eswt:2,manualRoom:2,remodel:true,sign:true},
+   staff:{reception:2,counselor:1,nurse:2,pt:4,radio:1,assoc:2},
+   desc:'빚 없이 현금 5억으로 시작해요. 고주파까지 장비 풀세트, 부원장 2명을 포함한 직원 14명. 처음부터 자동 운영으로 돌아가니 원장님은 경영만 하세요.'};
+const diffOf=()=>DIFFS[state.diff]||DIFFS.normal;
+const dailyInterest=()=>Math.round(state.loan*diffOf().rate/365);
+function fresh(name,diff){const D=DIFFS[diff]||DIFFS.normal;return{v:2,diff:DIFFS[diff]?diff:'normal',clinic:name||'김원장 통증의학과',day:1,money:D.money,loan:D.loan,
+  auto:!!D.auto,autoSpeed:1,autoPaused:false,autoLog:[],rating:D.rating||3.5,fatigue:100,level:1,xp:0,
+  totalTreated:0,overtreat:0,owned:{...D.owned},staff:{assoc:0,...D.staff},youtube:0,seminar:0,pharmacy:false,rentDiscount:0,
+  mods:[],returning:[],evtUsed:{},titleIdx:0,loanDone:D.loan<=0,log:[],today:null,modal:null,shopTab:'equip',flagCatch:0,flagMiss:0,uid:1};}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&s.v===2?s:null;}catch(e){return null;}}
+function log(html){state.log.push({t:state.today?clock(state.today.time):'',d:state.day,html});if(state.log.length>80)state.log.shift();}
+function toast(msg){const box=document.getElementById('toasts');const el=document.createElement('div');el.className='toast';el.textContent=msg;box.appendChild(el);setTimeout(()=>el.remove(),2600);}
+function gainXp(n){state.xp+=n;while(state.xp>=xpNext()){state.xp-=xpNext();state.level++;state.fatigue=Math.min(maxFat(),state.fatigue+10);toast(`원장 레벨 ${state.level} 달성! 최대 체력이 늘었어요.`);}}
+function titleIdx(){let i=0;TITLES.forEach((t,k)=>{if(state.totalTreated>=t[0]&&state.rating>=t[1])i=k;});return i;}
+
+/* ---------- day flow ---------- */
+function newGame(name,diff){state=fresh(name,diff);startDay();}
+function startDay(){
+  const dw=dowOf(state.day);
+  const T={open:540,close:dw===5?780:1080,time:540,lunchDone:dw===5,arrivals:[],queue:[],sel:null,result:null,served:0,lost:0,revenue:0,
+    cap:{unit:0,manual:0,eswt:0},patienceMod:0,extra:0,boost:null,vip:false,startRating:state.rating,startMoney:state.money,stars:[],pending:false,ended:false};
+  state.today=T;
+  const pool=EVENTS.filter(e=>(!e.once||!state.evtUsed[e.id])&&!(state.evtUsed[e.id]&&state.day-state.evtUsed[e.id]<7)&&e.cond(state));
+  if(state.day>1&&pool.length&&Math.random()<.42){const e=pick(pool);state.evtUsed[e.id]=state.day;T.pending=true;state.modal={type:'event',id:e.id};}
+  else genArrivals();
+}
+function patientCount(T){
+  const modSum=state.mods.reduce((a,m)=>a+m.val,0);
+  let n=10+(state.rating-3.5)*12+state.youtube*2+(state.owned.sign?1:0)+Math.min(Math.floor(state.day/4),6)+modSum+T.extra;
+  if(T.close-T.open<=300)n*=.55;
+  return clamp(Math.round(n),4,40);
+}
+function genPatient(time,T){
+  const ws=DX.map(d=>d.w*((T.boost&&T.boost[d.id])||1));let r=Math.random()*ws.reduce((a,b)=>a+b,0),d=DX[0];
+  for(let i=0;i<DX.length;i++){r-=ws[i];if(r<=0){d=DX[i];break;}}
+  const age=RI(d.ages[0],d.ages[1]);const sex=Math.random()<(d.fem||.5)?'F':'M';
+  const band=age>=60?'old':age>=40?'mid':'young';
+  const vas=d.flag?RI(7,10):RI(3,9);
+  const conservative=!d.flag&&vas<=5&&Math.random()<.5;
+  const side=pick(['오른쪽','왼쪽']);
+  let cc=pick([...d.cc,...(CC_MORE[d.id]||[])]).replace(/\{S\}/g,side);
+  if(!d.flag&&Math.random()<.7)cc+=' '+pick(ONSET).replace('{D}',pick(DUR));
+  const extra=[...d.sx.slice(1),...(SX_MORE[d.id]||[])].sort(()=>Math.random()-.5).slice(0,2);
+  const sx=d.flag?d.sx:[d.sx[0],...extra];
+  if(conservative)cc+=' '+pick(['주사는 좀 무서워서요, 물리치료나 약만 받고 싶어요.','바빠서 그런데 오늘은 물리치료만 받고 갈게요.','약 좀 지어주시고 물리치료 받으면 될 것 같아요.']);
+  return{id:state.uid++,name:pick(SUR)+pick(NAMES[sex][band]),sex,age,job:pick(d.jobs),dx:d.id,vas,conservative,sx,
+    xray:vas>=5&&!conservative&&canXray(),
+    silson:Math.random()<.65,arrive:time,patience:patienceRoll(T),examined:false,cc,avatar:avatarOf(age,sex),visit:1,history:[]};
+}
+const CC_MORE={
+ neck:['{S} 팔이 저리고 목을 돌리기가 힘들어요.','목이 아프더니 {S} 어깨랑 팔까지 뻗쳐요.','자고 일어났더니 {S} 날개뼈 안쪽이 쑤시고 팔이 저려요.'],
+ lumbar:['허리를 삐끗한 뒤로 {S} 엉덩이랑 다리가 저려요.','양말 신으려고 숙이면 {S} 다리로 찌릿해요.','{S} 종아리 바깥쪽이 계속 저려요.'],
+ stenosis:['조금 걷다 보면 다리가 무거워져서 쪼그려 앉아 쉬어요.','카트 밀고 걸으면 좀 낫고 그냥 걸으면 힘들어요.','밤에 다리가 저려서 자꾸 깨요.'],
+ facet:['허리를 돌릴 때 {S} 허리 아래쪽이 콕 찔려요.','오래 서서 설거지하면 허리가 끊어질 것 같아요.','아침엔 뻣뻣하다가 좀 움직이면 풀려요.'],
+ frozen:['{S} 어깨가 굳어서 옷 입기가 힘들어요.','{S} 팔을 뒤로 돌리면 너무 아파요.','몇 달 전부터 {S} 어깨가 점점 안 움직여요.'],
+ rotator:['{S} 어깨가 팔 들 때만 아프고 내리면 괜찮아요.','{S}으로 누우면 어깨가 아파서 깨요.','머리 빗을 때 {S} 어깨가 찌릿해요.'],
+ knee:['{S} 무릎이 아파서 쪼그려 앉기가 힘들어요.','오래 걸으면 {S} 무릎 안쪽이 붓고 아파요.','아침에 일어나면 무릎이 뻣뻣해요.'],
+ plantar:['{S} 발뒤꿈치가 아파서 절뚝거려요.','오래 서 있으면 발바닥이 화끈거려요.'],
+ elbow:['{S} 팔꿈치 바깥쪽이 아파서 컵 들기도 힘들어요.','마우스를 오래 쓰면 {S} 팔꿈치가 시큰해요.'],
+ discNeck:['컴퓨터를 오래 하면 목 뒤가 묵직해요.','고개를 숙이고 있으면 목이 뻐근하고 머리까지 무거워요.','목 뒤가 늘 뻣뻣하고 등까지 당겨요.'],
+ discLow:['허리가 묵직해서 오래 앉아 있기가 힘들어요.','아침에 세수하려고 숙이면 허리가 뻐근해요.','운전을 오래 하면 허리 가운데가 아파요.'],
+ phn:['{S} 옆구리가 전기 오듯 찌릿찌릿해요.','{S} 등에서 옆구리까지 화끈거려서 잠을 못 자요.'],
+ cts:['{S} 손이 저려서 젓가락질이 힘들어요.','운전하면 {S} 손가락이 저려요.'],
+ occipital:['{S} 뒷머리가 찌릿하면서 눈 뒤까지 아파요.','{S} 뒤통수를 누르면 찌릿해요.']
+};
+const ONSET=['{D} 전부터 그래요.','벌써 {D}째예요.','특별한 이유 없이 {D} 전부터 그래요.','무거운 걸 들고 나서 {D}째예요.','다른 병원도 다녀봤는데 {D}째 그대로예요.','처음엔 괜찮더니 {D} 전부터 심해졌어요.'];
+const DUR=['사흘','일주일','2주','한 달','두 달','반년','1년'];
+const SX_MORE={
+ neck:['경추 후방 압통','팔을 머리 위로 올리면 오히려 편함'],
+ lumbar:['요추 주위 근육 긴장','허리를 숙이면 다리 방사통 악화'],
+ stenosis:['자전거 타기는 괜찮음','카트를 밀면 걷기 편함'],
+ facet:['아침 강직 30분 이내','앉았다 일어설 때 통증'],
+ frozen:['외회전 제한이 가장 심함','당뇨 병력'],
+ rotator:['극상근 검사 시 통증','아픈 쪽으로 누우면 야간통'],
+ knee:['내측 관절선 압통','무릎을 끝까지 펼 때 통증'],
+ plantar:['평발 경향','최근 체중 증가'],
+ elbow:['중지 신전 저항 검사 양성','손목을 반복해서 쓰는 일'],
+ discNeck:['목 굴곡 시 통증 증가','장시간 컴퓨터 작업'],
+ discLow:['허리 굴곡 시 통증 증가','앉아 있을 때 악화, 걸으면 완화'],
+ phn:['통증 부위 감각 과민','항바이러스제 치료 받음'],
+ cts:['Tinel 징후 양성','엄지두덩 위축 없음'],
+ occipital:['목을 돌리면 악화','긴장성 두통 동반']
+};
+function patienceRoll(T){return Math.max(25,RI(50,100)+(state.staff.reception-1)*12+diffOf().patience+(state.owned.remodel?15:0)+T.patienceMod);}
+/* A returning patient: same person, new visit, symptoms follow how the last treatment went. */
+function makeReturn(r,T){
+  const h=r.history[r.history.length-1];const rel=h.before?(h.before-h.after)/h.before:0;let vas,cc;
+  if(h.referOnly){vas=clamp(h.before+RI(-1,0),3,10);
+    cc=`큰 병원에서 MRI 찍어봤더니 "${DXMAP[r.base.dx].name.replace(/\s*\(.*\)/,'')}" 소견이래요. 치료는 여기서 받고 싶어요.`;}
+  else if(rel>=.6){vas=clamp(h.after+RI(0,2),1,10);
+    cc=pick(['지난번 치료받고 정말 많이 좋아졌어요. 며칠 전부터 조금씩 다시 아파서 왔어요.','70~80%는 좋아졌어요. 한 번 더 받으면 될 것 같아요.','많이 편해졌는데 무리했더니 살짝 다시 올라왔어요.']);}
+  else if(rel>=.25){vas=clamp(h.after+RI(0,1),2,10);
+    cc=pick(['조금 나아지긴 했는데 아직 불편해요.','반쯤 좋아졌어요. 그래도 밤에는 좀 아파요.','처음보다는 낫는데 시원하게 낫진 않네요.']);}
+  else{vas=clamp(Math.max(h.after,h.before-1)+RI(0,1),3,10);
+    cc=pick(['솔직히 별 차이가 없어요. 다른 치료는 없을까요?','지난번 치료 후에도 똑같이 아파요.','하루 이틀 괜찮다가 원래대로 돌아왔어요.']);}
+  return{...r.base,id:state.uid++,vas,cc,visit:r.history.length+1,history:r.history,examined:false,patience:patienceRoll(T)+10};
+}
+function genArrivals(){
+  const T=state.today;
+  if(!Array.isArray(state.returning))state.returning=[];
+  const due=state.returning.filter(r=>r.due<=state.day);state.returning=state.returning.filter(r=>r.due>state.day);
+  const n=Math.max(patientCount(T),due.length+2);
+  const hasLunch=!T.lunchDone&&T.close>840;
+  const span=(T.close-T.open)-(hasLunch?60:0)-40;
+  const times=[];
+  for(let i=0;i<n;i++){let off=Math.floor(Math.pow(Math.random(),1.2)*span);let t=T.open+off;if(hasLunch&&t>=780)t+=60;times.push(t);}
+  times.sort((a,b)=>a-b);if(times.length)times[0]=T.open;
+  const pts=due.map(r=>makeReturn(r,T));while(pts.length<times.length)pts.push(genPatient(0,T));
+  for(let i=pts.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pts[i],pts[j]]=[pts[j],pts[i]];}
+  T.arrivals=times.map((t,i)=>{pts[i].arrive=t;return pts[i];});
+  if(T.vip&&T.open<=600){const p=genPatient(600,T);Object.assign(p,{name:'최회장님',sex:'M',age:74,job:'건물주',dx:'knee',cc:'무릎이 시큰거려서 왔네. 잘 좀 봐주게.',avatar:'👴',vip:true,silson:true,patience:120,vas:6});
+    T.arrivals.push(p);T.arrivals.sort((a,b)=>a.arrive-b.arrive);}
+  log(`<b>개원 ${state.day}일차 (${DOW[dowOf(state.day)]})</b> 진료 시작 · 예상 환자 ${T.arrivals.length}명${due.length?` (재진 ${due.length}명)`:''}`);
+  advance(0);
+}
+function advance(m){
+  const T=state.today;T.time+=m;
+  if(!T.lunchDone&&T.time>=780){T.lunchDone=true;T.time+=60;const rec=10+(state.owned.chair?15:0);state.fatigue=Math.min(maxFat(),state.fatigue+rec);
+    T.queue.forEach(p=>p.patience+=60);log(`점심시간 · 체력 +${rec}`);}
+  while(T.arrivals.length&&T.arrivals[0].arrive<=T.time){const p=T.arrivals.shift();T.queue.push(p);}
+  runAssociates();
+  T.queue=T.queue.filter(p=>{if(p.id===T.sel)return true;if(T.time-p.arrive>p.patience){T.lost++;state.rating=clamp(state.rating-.012,1,5);
+    log(`<span class="bad">${p.name}님이 기다리다 돌아가셨어요</span>`);return false;}return true;});
+  if(!state.auto&&!T.sel&&T.queue.length&&!T.result)T.sel=T.queue[0].id;
+}
+const cur=()=>{const T=state.today;return T&&T.queue.find(p=>p.id===T.sel);};
+
+function tMin(k){let m=TX[k].time-state.seminar*2;if(TX[k].proc)m-=2*(state.staff.nurse-1);return Math.max(3,m);}
+function txTime(tid){return 5+tMin(tid);}
+function txFat(tid){return Math.max(1,Math.round(TX[tid].fat*Math.max(.6,1-(state.level-1)*.04)));}
+function txBlock(tid){
+  const t=TX[tid],o=state.owned,s=state.staff,c=state.today.cap;
+  if(t.req&&!o[t.req])return'🔒 '+REQ_NAME[t.req]+' 필요';
+  if(t.radio&&!s.radio)return'방사선사 필요';
+  if(t.unit){if(!s.pt)return'물리치료사 필요';if(c.unit+t.unit>s.pt*UNIT_PER_PT)return'치료사 일정 마감';}
+  if(tid==='manual'&&c.manual>=(o.manualRoom||0)*MANUAL_PER_ROOM)return'도수치료실 마감';
+  if(tid==='eswt'&&c.eswt>=(o.eswt||0)*ESWT_PER_MACHINE)return'체외충격파 예약 마감';
+  return'';
+}
+const canXray=()=>!txBlock('xray');
+function exam(){const p=cur();if(!p||p.examined)return;p.examined=true;state.fatigue=Math.max(0,state.fatigue-1);
+  advance(Math.max(4,10-state.seminar*2));}
+function skillBonus(){let b=(state.level-1)*.05+state.seminar*.15+(state.owned.remodel?.1:0);if(state.fatigue<30)b-=(30-state.fatigue)/30*1.2;return b;}
+function visitTime(tids){return 5+tids.reduce((a,k)=>a+tMin(k),0);}
+/* Stars follow the actual pain relief (VAS), then small, visible adjustments. */
+function starCalc(p,d,tids,score,over,at){
+  const T=state.today,adj=[];let after,raw,ratio=null;
+  if(tids.includes('refer')&&!d.flag&&tids.length===1){after=p.vas;raw=score>=1.5?4:score>=.8?3:2;}
+  else{after=clamp(p.vas-Math.max(0,Math.round(score*2.2+R(-.8,.8))),0,10);ratio=p.vas?(p.vas-after)/p.vas:0;raw=ratio>=.7?5:ratio>=.5?4:ratio>=.3?3:ratio>=.1?2:1;}
+  const nc=tids.some(k=>!TX[k].cov&&TX[k].price>=50000*PRICE_X);const wait=(at??T.time)-p.arrive;
+  if(wait>45)adj.push([`대기 ${wait}분`,-.5]);
+  if(nc&&!p.silson&&!state.staff.counselor)adj.push(['실손 없이 비급여 부담',-.5]);
+  if(nc&&state.staff.counselor)adj.push(['상담실장 설명',.5]);
+  if(tids.includes('med')&&state.pharmacy)adj.push(['1층 약국 편리',.5]);
+  if(over)adj.push(['과잉진료 느낌',-1]);
+  if(p.conservative){if(tids.some(k=>TX[k].proc))adj.push(['원치 않던 주사·시술',-1]);
+    else if(tids.every(k=>['pt','med','manual','eswt','xray'].includes(k)))adj.push(['원하던 치료',.5]);}
+  const stars=clamp(Math.round(raw+adj.reduce((a,x)=>a+x[1],0)),1,5);
+  return{after,raw,adj,stars,ratio};
+}
+function resolveVisit(p,o){
+  const T=state.today,d=DXMAP[p.dx];
+  if(o.over)state.overtreat++;
+  let{after,raw,adj,stars,ratio}=starCalc(p,d,o.tids,o.score,o.over,o.at);
+  let review=pick(REV[stars]),flagRes=null;
+  if(o.over&&stars<=2)review='비싼 치료만 권하네요... 효과도 별로고요.';
+  if(d.flag){
+    adj=[];ratio=null;
+    if(o.flagHandled){stars=raw=5;after=p.vas;review='다른 데선 물리치료만 했는데, 여기서 큰 병을 찾아주셨어요. 생명의 은인입니다!';state.rating=clamp(state.rating+.05,1,5);state.flagCatch++;gainXp(15);flagRes='catch';}
+    else{stars=raw=1;after=Math.min(10,p.vas+1);review='치료받고 집에 갔다가 응급실에 실려 갔어요...';state.money-=5e6;state.rating=clamp(state.rating-.12,1,5);state.flagMiss++;flagRes='miss';}
+  }else if(o.tids.length===1&&o.tids[0]==='refer'){review=stars>=3?'큰 병원 가보라고 하셔서 다녀왔어요. 꼼꼼하시네요.':'여기서 해결될 줄 알았는데 큰 병원 가래요.';}
+  const revenue=CONSULT_FEE+o.tids.reduce((a,k)=>a+TX[k].price,0)+(p.xray&&!o.tids.includes('xray')?TX.xray.price:0);
+  state.money+=revenue;T.revenue+=revenue;T.served++;state.totalTreated++;T.stars.push(stars);
+  state.rating=clamp(state.rating+(stars-state.rating)*.06,1,5);
+  o.tids.forEach(k=>{if(TX[k].unit)T.cap.unit+=TX[k].unit;if(k==='manual')T.cap.manual++;if(k==='eswt')T.cap.eswt++;if(!o.assoc)state.fatigue=Math.max(0,state.fatigue-txFat(k));});
+  if(!o.assoc)gainXp(stars*2+(o.ai?2:0)+Math.round(ddxScore(p)/20));
+  let vipRes=null;if(p.vip){state.evtUsed.vipDone=1;if(stars>=5){state.rentDiscount+=50000;vipRes='good';}else vipRes='meh';}
+  const names=o.tids.map(k=>TX[k].name).join(' + ');
+  const referOnly=o.tids.length===1&&o.tids[0]==='refer';
+  if(!d.flag&&!p.vip&&(p.history||[]).length<3&&Math.random()<(referOnly?.6:after<=1?.15:stars>=2?.35:.15)){
+    state.returning.push({due:state.day+RI(2,7),base:{name:p.name,sex:p.sex,age:p.age,job:p.job,dx:p.dx,silson:p.silson,avatar:p.avatar,sx:p.sx},
+      history:[...(p.history||[]),{day:state.day,dx:(p.picks||[]).length?p.picks.join(' > '):(o.ai?o.ai.dx:''),picks:[...(p.picks||[])],tx:o.ai?o.ai.tx:o.tids.map(k=>TX[k].name),before:p.vas,after,stars,referOnly}]});
+  }
+  log(`${o.assoc?'<span class="assoc">부원장</span> ':''}${p.name}님 · ${names} <span class="st">${'★'.repeat(stars)}</span> <span class="good">+${won(revenue)}</span>${flagRes==='miss'?' <span class="bad">레드 플래그 놓침</span>':flagRes==='catch'&&o.assoc?' <span class="good">레드 플래그 발견</span>':''}`);
+  T.queue=T.queue.filter(x=>x.id!==p.id);
+  if(o.assoc){T.assocServed=(T.assocServed||0)+1;(T.assocLog=T.assocLog||[]).push({pid:p.id,tids:o.tids,age:p.age,sex:p.sex,id:p.id});if(T.assocLog.length>40)T.assocLog.shift();return;}
+  T.result={pid:p.id,name:p.name,avatar:p.avatar,tids:o.tids,names,stars,raw,adj,ratio,before:p.vas,after,revenue,review,dx:d.name,best:bestTx(d),over:o.over,flagRes,vipRes,ai:o.ai||null,
+    ddx:{picks:[...(p.picks||[])],correct:(DDX[p.dx]||[]).slice(0,3),score:ddxScore(p)}};
+  T.sel=null;
+  advance(visitTime(o.tids));
+}
+/* 부원장: sees waiting patients in parallel, a bit less skilled than the director. */
+function assocPick(p){
+  const d=DXMAP[p.dx];
+  if(d.flag)return Math.random()<.8?'refer':'med';
+  const pool=p.conservative?['pt','med']:Object.entries(d.eff).sort((a,b)=>b[1]-a[1]).map(x=>x[0]).filter(k=>k!=='refer');
+  const ok=pool.filter(k=>!txBlock(k));
+  return (Math.random()<.3&&ok[1]?ok[1]:ok[0])||'med';
+}
+function runAssociates(){
+  const T=state.today,n=state.staff.assoc||0;if(!n||!T)return;
+  if(!Array.isArray(T.assocFree)||T.assocFree.length!==n)T.assocFree=Array.from({length:n},(_,i)=>(T.assocFree||[])[i]||T.open);
+  let guard=0;
+  while(guard++<60){
+    const i=T.assocFree.indexOf(Math.min(...T.assocFree));
+    const cand=T.queue.filter(p=>p.id!==T.sel&&(state.auto||!p.vip)).sort((a,b)=>a.arrive-b.arrive)[0];
+    if(!cand)break;
+    const start=Math.max(T.assocFree[i],cand.arrive);
+    if(start>T.time)break;
+    const tid=assocPick(cand),t=TX[tid],d=DXMAP[cand.dx],eff=effOf(d,tid);
+    const score=eff*.8+R(-.7,.4);
+    resolveVisit(cand,{tids:[tid],score,over:!d.flag&&!t.cov&&t.price>=80000*PRICE_X&&eff<=1,flagHandled:tid==='refer',assoc:true,at:start});
+    T.assocFree[i]=start+Math.round(visitTime([tid])*.7)+2;
+  }
+}
+/* 빠른 선택: 여러 치료를 묶어서 한 번에 진료. 가장 잘 듣는 치료 + 나머지는 보조 효과 */
+function treatMulti(tids){
+  const p=cur();if(!p)return;
+  tids=[...new Set(tids)].filter(k=>TX[k]&&!txBlock(k)).slice(0,3);if(!tids.length)return;
+  const d=DXMAP[p.dx];
+  const effs=tids.map(k=>effOf(d,k)).sort((a,b)=>b-a);
+  let score=effs[0]+.3*Math.max(0,effs[1]||0)+.15*Math.max(0,effs[2]||0);
+  score=Math.min(score,3.4)+ddxScore(p)/100*.4+(tids.some(k=>TX[k].inj&&k!=='nerve')&&state.owned.us?.3:0)+skillBonus()+R(-.5,.5);
+  const over=!d.flag&&tids.some(k=>!TX[k].cov&&TX[k].price>=80000*PRICE_X&&effOf(d,k)<=1);
+  p.txSel=[];
+  resolveVisit(p,{tids,score,over,flagHandled:tids.includes('refer')});
+}
+function treat(tid){
+  const p=cur();if(!p||txBlock(tid))return;
+  const t=TX[tid],d=DXMAP[p.dx],eff=effOf(d,tid);
+  const score=eff+ddxScore(p)/100*.4+(t.inj&&state.owned.us&&tid!=='nerve'?.3:0)+skillBonus()+R(-.5,.5);
+  resolveVisit(p,{tids:[tid],score,over:!d.flag&&!t.cov&&t.price>=80000*PRICE_X&&eff<=1,flagHandled:tid==='refer'});
+}
+
+/* ---------- AI grading (free-text diagnosis & plan) ---------- */
+let sampleFn=null,sampleState='pending',aiCtl=null;
+(async()=>{try{sampleFn=window.claude?await window.claude.use('sample'):null;}catch(e){sampleFn=null;}
+  sampleState=sampleFn?'ready':'none';if(state){if(sampleState==='none')state.mode='quick';render();}})();
+const aiOn=()=>state.mode!=='quick'&&sampleState!=='none';
+function equipText(){
+  const has=k=>state.owned[k]?'있음':'없음';
+  const o=state.owned,s=state.staff;
+  return`초음파 ${has('us')}, C-arm ${has('carm')}, X-ray ${has('xray')}, 고주파 장비 ${has('rf')}, 체외충격파 ${o.eswt||0}대, 도수치료실 ${o.manualRoom||0}개. 물리치료사 ${s.pt}명(도수·체외충격파 담당), 방사선사 ${s.radio}명, 간호사 ${s.nurse}명.`;
+}
+function buildPrompt(p,dx,tx){
+  const d=DXMAP[p.dx];
+  return`너는 마취통증의학과 전문의 수련 지도교수이자 통증의학과 경영 게임의 채점관이다. 플레이어(원장)가 외래 환자에게 내린 진단과 치료 계획을 실제 임상 기준으로 평가하라.
+
+[환자]
+- ${p.age}세 ${p.sex==='F'?'여성':'남성'}, ${p.job}
+- 주호소: ${p.cc}
+- 통증 VAS ${p.vas}/10
+- 진찰 소견: ${(p.sx||d.sx).join('; ')}
+- 실손보험 ${p.silson?'있음':'없음'}
+- 진료 구분: ${(p.visit||1)>1?`재진 (${p.visit}번째 방문)`:'초진'}${p.conservative?'\n- 환자 희망: 주사나 시술 없이 물리치료나 약만 원함 (환자 선호를 존중했는지도 평가하라)':''}${p.xray?`\n- X-ray (${XR_REGION[XR[p.dx].r]}): ${XR[p.dx].txt}`:''}
+${(p.history||[]).map(h=>`- 이전 진료 (${state.day-h.day}일 전): 진단 "${h.dx||'기록 없음'}", 시행 ${h.tx.join(' / ')}, ${h.referOnly?'상급병원 의뢰':`치료 직후 VAS ${h.before}→${h.after}`}`).join('\n')}
+
+[게임 내부 참고 라벨] ${d.name}
+이 라벨은 게임이 증상을 만들 때 쓴 것일 뿐 정답이 아니다. 같은 소견에서 임상적으로 타당한 다른 진단(감별진단 포함)을 내렸다면 그 타당성만큼 인정하라.
+입력 방식: 플레이어는 게임으로 빠르게 진료하므로 짧은 약어(HIVD, OA, TFESI, MBB, TPI, NSAIDs 등)나 한두 단어로 적는다. 부위·좌우·레벨·용량을 생략해도 감점하지 말고, 의도가 임상적으로 맞으면 충분히 인정하라.
+채점 강도: 후하게 채점하라. 진단의 큰 범주와 치료 방향이 맞으면 dxScore·txScore 모두 85~100점을 줘라. 방향은 맞는데 최선은 아니면 70~85점. 명백히 틀렸거나 환자에게 해가 될 때(레드 플래그를 놓친 경우 등)만 50점 아래로 줘라. 설명이 짧거나 세부가 빠진 것, 추가 검사·교육·생활지도를 적지 않은 것은 감점 사유가 아니다.
+이 게임의 진료 관점: 척추 주위(목·등·허리) 근육의 축성 통증은 근막통증증후군보다 디스크성(추간판성) 통증으로 본다. 사지의 힘줄염·건병증은 별개의 진단으로 인정한다.
+신경학적 결손 규칙: 근력 저하나 감각 저하가 있으면 환자가 주호소에서 먼저 말한다. 주호소와 진찰 소견에 근력·감각 저하가 없으면 신경학적 결손이 없는 것으로 간주하라. 이 경우 신경학적 검사를 적지 않았거나 MRI 등 정밀검사를 처방하지 않았다는 이유로 감점하지 말고, 피드백에서도 그것을 아쉬운 점으로 지적하지 말라.${d.flag?' 이 환자에게는 응급·악성·감염 등 레드 플래그 소견이 있다.':''}
+
+[이 의원에서 지금 가능한 것] ${equipText()}
+장비나 인력이 없어 할 수 없는 시술을 처방했으면 feasible을 false로 하고 그 시술은 usedTreatments에서 빼라. 다만 같은 목적을 가능한 장비로 하는 방법(예: C-arm 대신 초음파 유도 시술)은 정당한 대안으로 인정하라.
+
+[플레이어 입력]
+진단: ${dx||'(비워둠)'}
+오늘 할 일 (번호는 순서와 무관):
+${tx.map((x,i)=>`${i+1}. ${x}`).join('\n')}
+
+[채점 항목]
+- dxScore: 진단은 게임이 객관식 순위(감별진단 순서)로 따로 채점하니 0을 넣어라. 플레이어의 진단 순위는 치료 계획을 이해하는 참고로만 써라.
+- txScore (0~100): 이 환자와 이 의원 여건에서 치료 계획의 적절성과 기대 효과. 레드 플래그를 놓치고 시술만 하면 0~10. 재진이면 이전 치료 반응을 반영하라: 잘 들은 치료를 반복하거나 이어가는 것은 타당하고, 효과 없던 치료를 그대로 반복하면 감점, 반응이 부족하면 단계적으로 치료를 바꾸거나 올린 것을 높게 평가하라.
+- usedTreatments: 실제 시행하는 치료·검사를 아래 키로 최대 4개 (가장 가까운 것으로 매핑). xray=X-ray 촬영, med=약 처방, pt=물리치료, manual=도수치료, eswt=체외충격파, tpi=통증유발점 주사, joint=관절강·점액낭 주사, prolo=프롤로·증식치료 주사, nerve=초음파 유도 신경차단(내측지 차단·선택적 신경근 차단·말초신경 차단·초음파 유도 경추 시술 포함), epi=C-arm 투시하 경막외 신경차단술, rf=고주파 열응고술, refer=상급병원·응급실 전원 또는 즉시 MRI 등 정밀검사 의뢰
+- referred: 전원이나 즉시 정밀검사 의뢰가 포함되면 true
+- overtreatment: 근거가 약한 비싼 비급여 치료를 끼워 넣었거나 치료를 과하게 겹쳤으면 true
+- feasible: 처방한 것을 이 의원에서 모두 할 수 있으면 true
+- feedback: 한국어 1~2문장, 짧게. 동료 전문의에게 말하듯 잘한 점 위주로, 정말 중요한 것만 덧붙여라.
+- best: 이 환자에게 이 의원에서 권할 1차 치료 한 줄 (한국어). 고주파 열응고술은 요즘 이 의원에서 거의 하지 않으니 best에 넣지 말라.
+
+JSON 객체 하나만 답하라. 예: {"dxScore":80,"txScore":75,"usedTreatments":["nerve","med"],"referred":false,"overtreatment":false,"feasible":true,"feedback":"...","best":"..."}`;
+}
+function aiErrText(e){const c=e&&e.code;
+  if(c==='not_granted'||c==='sampling_disabled'||c==='not_declared'||c==='capability_disabled'||c==='capability_removed')return'이 화면에서는 AI 채점을 쓸 수 없어요. 빠른 선택 모드로 진료해 주세요.';
+  if(c==='rate_limited')return'AI 채점 요청이 많아요. 잠시 뒤에 다시 눌러주세요.';
+  if(c==='session_expired')return'로그인이 만료됐어요. 다시 로그인한 뒤 눌러주세요.';
+  if(c==='invalid_json')return'채점 결과를 읽지 못했어요. 한 번 더 눌러주세요.';
+  if(c==='refused')return'이 입력은 채점할 수 없어요. 진단과 치료 계획을 다시 적어주세요.';
+  return'채점 중 연결이 끊겼어요. 한 번 더 눌러주세요.';}
+async function aiTreat(){
+  const T=state.today,p=cur();if(!p||!sampleFn||T.grading)return;
+  const dx=(p.picks||[]).map((x,i)=>`${i+1}순위 ${x}`).join(', '),tx=(p.draftTxs||[]).map(s=>String(s||'').trim()).filter(Boolean);
+  if(!tx.length){T.aiError='오늘 할 일을 하나 이상 적어주세요.';render();return;}
+  T.grading=p.id;T.aiError='';render();
+  aiCtl=new AbortController();
+  try{
+    const r=await sampleFn.json(buildPrompt(p,dx,tx),{signal:aiCtl.signal,cache:false});
+    if(state.today!==T||T.grading!==p.id)return;
+    T.grading=null;applyAi(p,dx,tx,r||{});
+  }catch(e){
+    if(state.today!==T)return;
+    T.grading=null;
+    if(!(e&&e.code==='cancelled'))T.aiError=aiErrText(e);
+    if(e&&['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e.code)){sampleFn=null;sampleState='none';state.mode='quick';}
+  }
+  save();render();
+}
+function applyAi(p,dx,tx,r){
+  const d=DXMAP[p.dx];
+  const ds=ddxScore(p),ts=Math.round(clamp(+r.txScore||0,0,100));
+  let tids=[...new Set((Array.isArray(r.usedTreatments)?r.usedTreatments:[]).map(String).filter(k=>TX[k]))].slice(0,4);
+  const blocked=tids.filter(k=>txBlock(k));
+  tids=tids.filter(k=>!txBlock(k));
+  if(!tids.length)tids=['med'];
+  let score=(ds*.35+ts*.65)/100*3.2-.1+skillBonus()+R(-.4,.4);
+  if(blocked.length)score=Math.min(score,1.2);
+  else if(r.feasible===false)score-=.4;
+  resolveVisit(p,{tids,score,over:!d.flag&&!!r.overtreatment,flagHandled:!!r.referred||tids.includes('refer'),
+    ai:{dx,tx,ds,ts,feedback:String(r.feedback||''),best:String(r.best||''),blocked}});
+}
+function nextPatient(){const T=state.today;T.result=null;if(T.queue.length)T.sel=T.queue[0].id;}
+function waitNext(){
+  const T=state.today;if(!T.arrivals.length)return;
+  const target=T.arrivals[0].arrive;
+  if(!T.lunchDone&&target>=780){T.time=Math.max(T.time,780);advance(0);}
+  if(target>T.time)advance(target-T.time);else advance(0);
+}
+function endDay(){
+  const T=state.today;if(T.ended)return;T.ended=true;
+  if(T.queue.length){T.lost+=T.queue.length;state.rating=clamp(state.rating-.006*T.queue.length,1,5);log(`<span class="bad">마감으로 ${T.queue.length}명이 돌아가셨어요</span>`);}
+  T.queue=[];T.sel=null;T.result=null;
+  const rent=Math.max(0,RENT-state.rentDiscount);
+  const wages=STAFF.reduce((a,s)=>a+s.wage*state.staff[s.k],0);
+  const interest=dailyInterest();
+  const material=Math.round(T.revenue*.08);
+  const opex=OPEX;
+  const cost=rent+wages+interest+material+opex;
+  state.money-=cost;
+  state.mods.forEach(m=>m.days--);state.mods=state.mods.filter(m=>m.days>0);
+  const ti=titleIdx();const newTitle=ti>state.titleIdx?TITLES[ti][2]:null;if(ti>state.titleIdx)state.titleIdx=ti;
+  T.summary={rent,wages,interest,material,opex,cost,net:T.revenue-cost,newTitle};
+  log(`<b>${state.day}일차 마감</b> · 순이익 <span class="${T.revenue-cost>=0?'good':'bad'}">${won(T.revenue-cost)}</span>`);
+  state.modal={type:state.money<diffOf().limit?'gameover':'summary'};
+}
+function nextDay(){
+  state.day++;state.fatigue=Math.min(maxFat(),state.fatigue+40);
+  if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진. 체력을 모두 회복했어요.');}
+  state.modal=null;startDay();
+}
+
+/* ---------- render ---------- */
+function vasCells(v){let h='';for(let i=0;i<10;i++){const c=i<v?(i<3?'g':i<6?'a':'c'):'';h+=`<i class="${c}"></i>`;}return h;}
+function render(){
+  const s=state,T=s.today,mf=maxFat(),fp=s.fatigue/mf;
+  const p=cur();
+  const ratingStars=Math.round(s.rating);
+  let html=`
+  <header class="top">
+    <div class="brand"><span class="cross" aria-hidden="true"></span>
+      <div><h1>${esc(s.clinic)}</h1><div class="sub"><b>${TITLES[s.titleIdx][2]}</b> · 원장 Lv.${s.level} · 경험치 ${s.xp}/${xpNext()}</div></div></div>
+    <nav class="nav">
+      <button class="btn ${s.auto?'primary':''}" data-act="auto" aria-pressed="${!!s.auto}">${s.auto?'자동 운영 중':'자동 운영'}</button>
+      ${Ads.on?'<button class="btn" data-act="rewards">🎁 보상</button>':''}
+      <button class="btn" data-act="shop">투자·채용</button>
+      <button class="btn" data-act="help">진료 안내</button>
+      <button class="btn ghost" data-act="new">새 게임</button>
+    </nav>
+  </header>
+  <section class="stats">
+    <div class="stat"><span class="k">개원 ${s.day}일차 · ${DOW[dowOf(s.day)]}요일</span><span class="v">${T?clock(T.time):'--:--'}<small>~${T?clock(T.close):''}</small></span></div>
+    <div class="stat"><span class="k">운영 자금</span><span class="v ${s.money<0?'neg':''}">${won(s.money)}</span></div>
+    <div class="stat"><span class="k">평점</span><span class="v">${s.rating.toFixed(2)}<small class="stars-mini">${'★'.repeat(ratingStars)}</small></span></div>
+    <div class="stat"><span class="k">원장 체력</span><span class="v">${s.fatigue}<small>/ ${mf}</small></span><div class="bar"><i class="${fp<.3?'low':fp<.6?'mid':''}" style="width:${fp*100}%"></i></div></div>
+    <div class="stat"><span class="k">개원 대출 잔액</span><span class="v">${s.loan>0?won(s.loan):'완납'}</span></div>
+    <div class="stat"><span class="k">오늘 매출 · 진료</span><span class="v">${T?won(T.revenue):'-'}<small>${T?T.served+'명':''}</small></span></div>
+  </section>
+  <main class="main">
+    <section class="panel queue"><h2>대기실 <span>${T?T.queue.filter(x=>x.id!==T.sel||!T.result).length:0}명 대기</span></h2>${renderQueue()}</section>
+    <section class="panel room">${s.auto&&T&&!T.pending?renderAuto():renderRoom()}</section>
+    <section class="panel log"><h2>진료 기록 <span>최근 순</span></h2><div class="loglist">${s.log.slice().reverse().slice(0,40).map(e=>`<div class="le"><span class="tm">${e.t||'D'+e.d}</span><span>${e.html}</span></div>`).join('')||'<div class="empty">아직 기록이 없어요.</div>'}</div></section>
+  </main>`;
+  app.innerHTML=html;
+  mountScene();drawXrays();
+  renderModal();
+}
+function renderQueue(){
+  const T=state.today;if(!T)return'';
+  const items=T.queue.map(p=>{const left=p.patience-(T.time-p.arrive);const pct=clamp(left/p.patience,0,1);
+    return`<button class="q ${p.id===T.sel?'sel':''}" data-act="sel" data-arg="${p.id}" ${T.result?'disabled':''}>
+      <span class="av" aria-hidden="true">${p.avatar}</span>
+      <span class="info"><span class="nm"><span>${p.name}${p.vip?' ⭐':''}${(p.visit||1)>1?' <small class="re-mark">재진</small>':''}${p.conservative?' <small class="re-mark cons">보존</small>':''}${p.xray?' <small class="re-mark">X-ray</small>':''}</span> <em>${p.age}${p.sex==='F'?'여':'남'} · ${T.time-p.arrive}분</em></span>
+      <span class="cc">${p.cc}</span>
+      <span class="bar" title="인내심"><i class="${pct<.3?'low':pct<.6?'mid':''}" style="width:${pct*100}%"></i></span></span></button>`;}).join('');
+  const up=T.arrivals.length;
+  return`<div class="qlist">${items||'<div class="empty">대기 중인 환자가 없어요.</div>'}</div>
+   <div class="upcoming">${up?`이후 내원 예정 약 ${up}명 · 다음 환자 ${clock(T.arrivals[0].arrive)}경`:T.time>=T.close?'진료 시간이 끝났어요.':'오늘 올 환자는 모두 왔어요.'}</div>`;
+}
+function renderRoom(){
+  const T=state.today;if(!T)return'';
+  if(T.pending)return`<h2>아침 조회</h2><div class="room-empty"><p>오늘 일정을 정하는 중이에요.</p></div>`;
+  if(T.result)return renderResult(T.result);
+  const p=cur();
+  const lateBanner=T.time>=T.close?`<div class="banner warn">진료 시간이 지났어요. 남은 환자를 보거나 마감하세요. 체력이 떨어질수록 치료 효과도 떨어져요.</div>`:'';
+  const tiredBanner=state.fatigue<30?`<div class="banner warn">원장님이 많이 지쳤어요. 체력 30 미만에서는 치료 효과가 떨어져요.</div>`:'';
+  if(!p){
+    const canWait=T.arrivals.length>0;
+    return`<h2>진료실 <span>${clock(T.time)}</span></h2>${lateBanner}
+      <div class="room-empty"><p>${canWait?`다음 환자는 ${clock(T.arrivals[0].arrive)}쯤 와요. 잠깐 차트 정리라도 할까요?`:'오늘 진료할 환자를 모두 봤어요. 수고하셨습니다, 원장님.'}</p>
+      <div class="row" style="justify-content:flex-start">
+       ${canWait?`<button class="btn primary" data-act="wait">다음 환자 기다리기</button>`:''}
+       <button class="btn ${canWait?'':'primary'}" data-act="endday">오늘 진료 마감</button></div></div>`;
+  }
+  const d=DXMAP[p.dx];const wait=T.time-p.arrive;
+  const txs=TX_ORDER.map(k=>{const t=TX[k],blk=txBlock(k);
+    const capTxt=k==='manual'?` · ${T.cap.manual}/${(state.owned.manualRoom||0)*MANUAL_PER_ROOM}`:k==='eswt'?` · ${T.cap.eswt}/${(state.owned.eswt||0)*ESWT_PER_MACHINE}`:'';
+    const on=(p.txSel||[]).includes(k);
+    return`<button class="tx ${t.cov?'':'nc'} ${k==='refer'?'ref':''}" data-act="txsel" data-arg="${k}" aria-pressed="${on}" ${blk&&!on?'disabled':''}>
+      <span class="t">${t.name}</span><span class="m">${txTime(k)}분 · ${t.price?won(t.price):'진찰료만'} · 체력 ${txFat(k)}${capTxt}</span>
+      <span class="n ${blk?'lock':''}">${blk||t.note}</span></button>`;}).join('');
+  return`<h2>진료실 <span>${clock(T.time)} · 진찰 기본 5분</span></h2>${lateBanner}${tiredBanner}
+   <div class="chart-head"><div class="avatar" aria-hidden="true">${p.avatar}</div>
+     <div class="who"><div class="name">${p.name}<small>${p.age}세 · ${p.sex==='F'?'여':'남'} · ${p.job}</small></div>
+       <div class="tags">${(p.visit||1)>1?`<span class="tag re">재진 · ${p.visit}번째 방문</span>`:'<span class="tag">초진</span>'}${p.conservative?'<span class="tag cons">보존치료 희망 · 물리치료/약</span>':''}${p.xray?'<span class="tag">X-ray 촬영함</span>':''}<span class="tag ${p.silson?'ok':''}">실손보험 ${p.silson?'있음':'없음'}</span>${p.vip?'<span class="tag vip">VIP · 건물주</span>':''}<span class="tag ${wait>45?'warn':''}">대기 ${wait}분</span></div></div></div>
+   <blockquote class="cc-quote">“${p.cc}”</blockquote>
+   ${historyBox(p)}
+   ${p.xray?xrayBox(p):''}
+   <div class="vas-wrap"><div class="vas-lbl"><span>통증 점수 (VAS)</span><b>${p.vas} / 10</b></div><div class="vas">${vasCells(p.vas)}</div></div>
+   <div class="findings"><h3>진찰 소견</h3><ul>${(p.sx||d.sx).map(x=>`<li>${x}</li>`).join('')}</ul></div>
+   ${modeSwitch()}
+   ${aiOn()?renderAiBox(p):`
+   ${ddxPicker(p,false)}
+   <p class="hint">치료사 일정 ${T.cap.unit}/${state.staff.pt*UNIT_PER_PT}단위 사용 (물리치료·체외충격파 1, 도수 2)</p>
+   <h3 class="tx-h">치료 선택 · 오늘 할 치료를 최대 3개 고른 뒤 '진료 완료'</h3>
+   <div class="tx-grid">${txs}</div>
+   ${(()=>{const sel=(p.txSel||[]);return`<div class="tx-done">
+     <span>${sel.length?`<b>${sel.map(k=>TX[k].name).join(' + ')}</b> · ${visitTime(sel)}분 · 진료비 ${won(CONSULT_FEE+sel.reduce((a,k)=>a+TX[k].price,0))}`:'<span class="unk">치료를 골라주세요</span>'}</span>
+     <button class="btn primary" data-act="txdone" ${sel.length?'':'disabled'}>진료 완료</button></div>`;})()}`}`;
+}
+const DX_SUGGEST=['요추 추간판 탈출증 (HIVD)','경추 추간판 탈출증','디스크성 요통','디스크성 목통증','척추관 협착증','요추 후관절 증후군','오십견 (유착성 관절낭염)','회전근개 건병증','무릎 골관절염','족저근막염','테니스 엘보 (외측 상과염)','대상포진 후 신경통','수근관 증후군','후두신경통','압박골절 의심','마미 증후군 의심','척추 감염 의심','척추 전이암 의심'];
+const TX_CHIPS=['약 처방','물리치료','도수치료','체외충격파','TPI','관절강 주사','프롤로 주사','초음파 유도 신경차단','MBB','경막외 차단술','고주파 열응고술','MRI·상급병원 의뢰'];
+function ddxPicker(p,busy){const picks=p.picks||[];
+  return`<div class="ddx"><div class="ddx-h"><h3 class="tx-h">진단 · 가장 의심되는 순서대로 눌러주세요 (최대 3개)</h3>${picks.length&&!busy?'<button class="btn sm ghost" data-act="ddxclear">다시 고르기</button>':''}</div>
+   <div class="chips">${ddxOptions(p).map(x=>{const i=picks.indexOf(x);
+     return`<button class="chip ddx-c" data-act="ddx" data-arg="${esc(x)}" aria-pressed="${i>=0}" ${busy?'disabled':''}>${i>=0?`<b class="rank">${i+1}</b>`:''}${esc(x)}</button>`;}).join('')}</div></div>`;}
+function toggleChip(p,text){
+  const cur=(p.draftTxs||['','','']).map(s=>s||'');
+  const i=cur.indexOf(text);
+  if(i>=0)cur[i]='';
+  else{let j=cur.findIndex(s=>!s.trim());if(j<0)j=cur.length-1;cur[j]=text;}
+  p.draftTxs=cur;
+}
+function historyBox(p){
+  const hs=p.history||[];if(!hs.length)return'';
+  return`<div class="history"><h3>이전 진료 기록</h3>${hs.slice().reverse().map(h=>`<div class="hv">
+      <div class="hv-top"><b>개원 ${h.day}일차</b><span>${state.day-h.day}일 전 · <span class="st">${'★'.repeat(h.stars)}</span></span></div>
+      <div>진단: ${h.dx?esc(h.dx):'<span class="unk">기록 없음</span>'}</div>
+      <ol>${h.tx.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+      <div class="hv-vas">${h.referOnly?`상급병원 의뢰 · 당시 VAS ${h.before}`:`치료 직후 VAS ${h.before} → ${h.after}`}</div></div>`).join('')}
+    <p class="now">오늘 VAS <b>${p.vas}</b> · 첫 방문 때 ${hs[0].before}</p></div>`;
+}
+function modeSwitch(){
+  if(sampleState==='none')return`<p class="mode-note">이 화면에서는 AI 채점을 쓸 수 없어 빠른 선택으로 진료해요.</p>`;
+  const ai=aiOn();const busy=!!state.today.grading;
+  return`<div class="seg" role="group" aria-label="진료 방식">
+    <button class="btn sm" data-act="mode" data-arg="ai" aria-pressed="${ai}" ${busy?'disabled':''}>직접 입력 · AI 채점</button>
+    <button class="btn sm" data-act="mode" data-arg="quick" aria-pressed="${!ai}" ${busy?'disabled':''}>빠른 선택</button></div>`;
+}
+function renderAiBox(p){
+  const T=state.today;const busy=T.grading===p.id;
+  return`<div class="ai-box">
+    ${ddxPicker(p,busy)}
+    <div class="chips" role="group" aria-label="자주 쓰는 치료">
+      ${(p.history||[]).length?`<button class="chip again" data-act="chipagain" ${busy?'disabled':''}>↺ 지난번 치료 그대로</button>`:''}
+      ${TX_CHIPS.map((c,i)=>`<button class="chip" data-act="chip" data-arg="${i}" aria-pressed="${(p.draftTxs||[]).includes(c)}" ${busy?'disabled':''}>${c}</button>`).join('')}
+    </div>
+    <fieldset class="todo"><legend>오늘 할 일 <small>위 버튼을 누르거나 직접 적기 · Enter로 바로 채점</small></legend>
+      ${[0,1,2].map(i=>`<div class="todo-row"><span class="num">${i+1}</span><input id="tx-${i+1}" autocomplete="off" aria-label="오늘 할 일 ${i+1}" placeholder="${i?'(선택)':'오늘 할 치료'}" value="${esc((p.draftTxs||[])[i]||'')}" ${busy?'disabled':''}></div>`).join('')}
+    </fieldset>
+    <p class="hint">지금 쓸 수 있는 장비: ${equipText()} 처방한 치료에 맞춰 시간·진료비·체력이 자동으로 계산돼요.</p>
+    ${T.aiError?`<div class="banner warn">${esc(T.aiError)}</div>`:''}
+    <div class="row" style="justify-content:flex-start">
+      ${busy?`<span class="thinking">지도교수가 차트를 검토하는 중…</span><button class="btn sm" data-act="cancelai">취소</button>`
+            :`<button class="btn primary" data-act="ai">진료하고 AI 채점받기</button>`}
+    </div></div>`;
+}
+function renderResult(r){
+  const T=state.today;
+  const bestName=TX[r.best].name;const match=!r.ai&&r.tids&&r.tids[0]===r.best;
+  const why=r.flagRes?'':`<div class="star-why">${r.ratio!=null?`통증 ${Math.round(r.ratio*100)}% 감소`:'전원 판단'} → 기본 ★${r.raw}${(r.adj||[]).map(([l,v])=>` · ${l} ${v>0?'+':''}${v}`).join('')} = <b>★${r.stars}</b></div>`;
+  const ai=r.ai?`<div class="ai-eval"><h3>AI 지도교수 평가</h3>
+     <div class="scores"><span>진단 <b>${r.ai.ds}</b><small>/100</small></span><span>치료 <b>${r.ai.ts}</b><small>/100</small></span></div>
+     <p class="mine">내 진단: ${esc(r.ai.dx||'(비워둠)')}<br>오늘 할 일: ${r.ai.tx.map((x,i)=>`${i+1}) ${esc(x)}`).join(' · ')}</p>
+     <p>${esc(r.ai.feedback)}</p>
+     ${r.ai.best?`<p class="lead">권장 1차 치료: ${esc(r.ai.best)}</p>`:''}
+     <p class="lead">게임 처리: ${r.names}${r.ai.blocked.length?` · 장비·인력이 없어 빠진 치료: ${r.ai.blocked.map(k=>TX[k].name).join(', ')}`:''}</p></div>`:'';
+  let notes='';
+  if(r.flagRes==='catch')notes+=`<div class="banner">레드 플래그를 잡아냈어요! 평점 보너스와 경험치를 받았어요.</div>`;
+  if(r.flagRes==='miss')notes+=`<div class="banner warn">레드 플래그를 놓쳤어요. 합의금 500만원이 나가고 평점이 크게 떨어졌어요. 응급·악성 신호가 보이면 전원하세요.</div>`;
+  if(r.over)notes+=`<div class="banner warn">효과 낮은 비급여 치료로 과잉진료 1건이 기록됐어요 (누적 ${state.overtreat}건). 심평원 조사 때 문제가 될 수 있어요.</div>`;
+  if(r.vipRes==='good')notes+=`<div class="banner">최회장님이 크게 만족하셨어요. 임대료가 하루 5만원 내려가요!</div>`;
+  if(r.vipRes==='meh')notes+=`<div class="banner">최회장님 반응이 미지근해요. 임대료 할인은 없었어요.</div>`;
+  const hasNext=T.queue.length>0;
+  return`<div class="result">
+   <h2>진료 결과</h2>
+   <div class="r-top"><span class="r-stars" aria-label="별 ${r.stars}개">${starStr(r.stars)}</span><span class="r-money">+${won(r.revenue)}</span></div>
+   <div class="r-name">${r.avatar} ${r.name}님 · ${r.names}</div>
+   <div class="vas-change">
+     <div class="vas-wrap"><div class="vas-lbl"><span>치료 전 VAS</span><b>${r.before}</b></div><div class="vas">${vasCells(r.before)}</div></div>
+     <span class="arrow">→</span>
+     <div class="vas-wrap"><div class="vas-lbl"><span>치료 후 VAS</span><b>${r.after}</b></div><div class="vas">${vasCells(r.after)}</div></div>
+   </div>
+   <blockquote class="review">“${r.review}”<cite>방문자 리뷰 · ${'★'.repeat(r.stars)}</cite></blockquote>
+   ${why}
+   ${r.ddx?`<div class="answer ddx-res"><span>진단 점수 <b>${r.ddx.score}</b>/100</span>
+     <span>내 순위: ${r.ddx.picks.length?r.ddx.picks.map((x,i)=>`${i+1}) ${esc(x)}${r.ddx.correct[i]===x?' ✓':''}`).join(' · '):'선택 안 함'}</span>
+     <span>모범 순위: ${r.ddx.correct.map((x,i)=>`${i+1}) ${x}`).join(' · ')}</span></div>`:''}
+   ${ai}
+   <div class="answer"><span>${r.ai?'게임 참고 라벨':'진단'}: <b>${r.dx}</b></span><span>${r.ai?'게임 참고 치료':'모범 치료'}: <b>${bestName}</b>${match?' · 정답이에요!':''}${!match&&TX[r.best].req&&!state.owned[TX[r.best].req]?` · ${REQ_NAME[TX[r.best].req]} 장비가 있으면 할 수 있어요`:''}</span></div>
+   ${notes}
+   <div class="row" style="justify-content:flex-start">
+     ${hasNext?`<button class="btn primary" data-act="next">다음 환자 부르기</button>`:`<button class="btn primary" data-act="next">확인</button>`}
+   </div></div>`;
+}
+
+/* ---------- modals ---------- */
+function modal(inner,wide){return`<div class="overlay" role="dialog" aria-modal="true"><div class="modal ${wide?'wide':''}">${inner}</div></div>`;}
+function renderModal(){
+  const m=state.modal;if(!m){mroot.innerHTML='';return;}
+  let h='';
+  if(m.type==='intro'){
+    h=modal(`<h2>개원을 축하합니다!</h2>
+      <p>도시의 한 빌딩에 마취통증의학과를 열었습니다. 환자를 잘 고쳐서 평점을 올리고, 대출을 갚으며 명의로 키워보세요.</p>
+      <div class="diffs" role="radiogroup" aria-label="난이도">${Object.entries(DIFFS).map(([k,D])=>{
+        const wages=STAFF.reduce((a,x)=>a+x.wage*(D.staff[x.k]||0),0);
+        const month=(wages+RENT+OPEX)*25+Math.round(D.loan*D.rate/12);
+        const staffTxt=STAFF.filter(x=>D.staff[x.k]).map(x=>`${x.name.replace(' 직원','')} ${D.staff[x.k]}`).join(', ');
+        return`<button class="diff ${state.diff===k?'on':''}" role="radio" aria-checked="${state.diff===k}" data-act="diff" data-arg="${k}">
+          <span class="dn">${D.name}</span><span class="dd">${D.desc}</span>
+          <span class="dm">대출 ${won(D.loan)} · 운영 자금 ${won(D.money)} · 월 고정비 약 ${won(month)}</span>
+          <span class="dm">직원: ${staffTxt}</span></button>`;}).join('')}</div>
+      <div class="field"><label for="clinic-name">의원 이름</label><input id="clinic-name" maxlength="20" value="${esc(state.clinic)}"></div>
+      <div class="row"><button class="btn" data-act="help">진료 안내 먼저 보기</button><button class="btn primary" data-act="start">개원하기</button></div>`);
+  }else if(m.type==='event'){
+    const e=EVENTS.find(x=>x.id===m.id);
+    h=modal(`<p class="lead">개원 ${state.day}일차 · 아침</p><h2>${val(e.title)}</h2><p>${val(e.text)}</p>
+      <div class="opts">${e.opts.map((o,i)=>`<button class="btn" data-act="evt" data-arg="${i}">${o.label}</button>`).join('')}</div>`);
+  }else if(m.type==='summary'||m.type==='gameover'){
+    const T=state.today,S=T.summary;const avg=T.stars.length?(T.stars.reduce((a,b)=>a+b,0)/T.stars.length).toFixed(1):'-';
+    const dr=state.rating-T.startRating;
+    const over=m.type==='gameover';
+    h=modal(`<p class="lead">개원 ${state.day}일차 (${DOW[dowOf(state.day)]}) 결산</p>
+      <h2>${over?'마이너스 통장 한도 초과… 폐업입니다':S.net>=0?'흑자 마감!':'오늘은 적자예요'}</h2>
+      ${S.newTitle?`<div class="banner">새 칭호를 얻었어요: <b>${S.newTitle}</b></div>`:''}
+      <div class="sumgrid">
+        <div class="stat"><span class="k">진료 환자</span><span class="v">${T.served}명</span></div>
+        ${T.assocServed?`<div class="stat"><span class="k">부원장 진료</span><span class="v">${T.assocServed}명</span></div>`:''}
+        <div class="stat"><span class="k">돌아간 환자</span><span class="v ${T.lost?'neg':''}">${T.lost}명</span></div>
+        <div class="stat"><span class="k">평균 별점</span><span class="v">${avg}</span></div>
+        <div class="stat"><span class="k">평점 변화</span><span class="v ${dr<0?'neg':''}">${dr>=0?'+':''}${dr.toFixed(2)}</span></div>
+      </div>
+      <table class="ledger"><tbody>
+        <tr><td>진료 매출</td><td>${won(T.revenue)}</td></tr>
+        <tr><td>임대료${state.rentDiscount?' (건물주 할인 적용)':''}</td><td>-${won(S.rent)}</td></tr>
+        <tr><td>인건비</td><td>-${won(S.wages)}</td></tr>
+        <tr><td>대출 이자 (연 ${Math.round(diffOf().rate*100)}%)</td><td>-${won(S.interest)}</td></tr>
+        <tr><td>운영비 (전기·소모품·EMR·장비 유지보수)</td><td>-${won(S.opex||0)}</td></tr>
+        <tr><td>재료비 (매출의 8%)</td><td>-${won(S.material)}</td></tr>
+        <tr class="total"><td>순이익</td><td class="${S.net<0?'neg':''}">${won(S.net)}</td></tr>
+        <tr class="total"><td>운영 자금</td><td class="${state.money<0?'neg':''}">${won(state.money)}</td></tr>
+      </tbody></table>
+      ${state.overtreat?`<p class="lead">과잉진료 누적 ${state.overtreat}건 · 심평원 조사에 주의하세요.</p>`:''}
+      ${over?`<p>누적 진료 ${state.totalTreated}명, 최고 칭호 "${TITLES[state.titleIdx][2]}". 다시 도전해보세요!</p>
+        <div class="row">${Ads.on&&!state.reviveUsed?`<button class="btn" data-act="ad" data-arg="revive">▶ 광고 보고 긴급 자금 ${won(AD_REVIVE)} 받고 계속</button>`:''}<button class="btn primary" data-act="restart">다시 개원하기</button></div>`
+      :`<div class="row">${Ads.on&&S.net>0&&!adUses().double?`<button class="btn" data-act="ad" data-arg="double">▶ 광고 보고 순이익 2배 (+${won(Math.min(S.net,5e6))})</button>`:''}<button class="btn" data-act="shop">투자·채용</button><button class="btn primary" data-act="nextday">다음 날 진료 시작</button></div>`}`);
+  }else if(m.type==='shop'){h=modal(renderShop(),true);}
+  else if(m.type==='help'){
+    h=modal(`<div class="help"><h2>진료 안내</h2>
+      <h3>하루 진료</h3><ul><li>평일 09:00~18:00 (점심 13~14시), 토요일 09:00~13:00, 일요일 휴진.</li><li>대기실에서 환자를 골라 진료하세요. 모든 진료는 기본 5분 + 치료 시간이 걸려요.</li><li>오래 기다리면 환자가 돌아가고 평점이 내려가요. 인내심 막대를 보세요.</li></ul>
+      <h3>진단과 치료</h3><ul><li><b>직접 입력 · AI 채점</b>: 진단과 치료 계획을 직접 적으면 Claude가 실제 임상 기준으로 채점해요. 점수가 치료 효과(VAS 감소)와 별점에 반영되고, 적은 치료에 맞춰 시간·진료비가 계산돼요. 채점 한 번마다 내 Claude 사용량이 조금 쓰여요.</li><li><b>빠른 선택</b>: 치료 버튼을 최대 3개 고른 뒤 '진료 완료'를 누르면 진료해요. 가장 잘 듣는 치료에 나머지 치료가 보조 효과를 더해요. 게임에 정해진 효과표로 계산해요.</li><li>별점은 통증이 줄어든 비율로 정해지고, 대기 시간·비급여 부담·과잉진료 등이 ±로 붙어요. 결과 화면에 계산 과정이 나와요.</li><li>환자의 호소와 진찰 소견으로 진단을 추정하세요. 진단은 객관식이에요. 보기 중 가장 의심되는 순서대로 최대 3개를 누르세요. 1순위가 맞으면 60점, 2순위 25점, 3순위 15점이고, 모범 순위 안에 있지만 순서가 다르면 절반을 받아요. 진단 점수가 높을수록 치료 효과도 조금 올라가요.</li><li>질환마다 잘 듣는 치료가 달라요. 결과 화면에서 모범 치료를 알려줘요.</li><li>효과 없는 비싼 비급여 치료는 과잉진료로 기록돼요. 쌓이면 심평원 조사에서 환수금을 내요.</li><li>실손보험이 없는 환자는 비싼 비급여 치료에 불만이 커요. 상담실장을 두면 줄어들어요.</li></ul>
+      <h3>레드 플래그</h3><ul><li>배뇨 장애, 발열, 체중 감소, 암 병력, 외상 후 극심한 통증 같은 신호가 보이면 <b>상급병원 전원</b>이 정답이에요.</li><li>놓치면 합의금 500만원과 큰 평점 하락이 있어요. 잡아내면 큰 보너스!</li></ul>
+      <h3>체력과 성장</h3><ul><li>시술할수록 원장 체력이 줄어요. 30 미만이면 치료 효과가 떨어져요. 점심·밤·일요일에 회복돼요.</li><li>경험치로 원장 레벨이 오르면 최대 체력과 실력이 늘어요.</li><li>물리치료사 1명은 하루 ${UNIT_PER_PT}단위를 맡아요 (물리치료·체외충격파 1, 도수 2). 도수치료실 1개는 하루 ${MANUAL_PER_ROOM}회, 체외충격파 1대는 하루 ${ESWT_PER_MACHINE}회까지예요. C-arm 시술과 X-ray는 방사선사가 있어야 해요.</li><li>돈을 모아 장비를 늘리고 직원을 뽑고, 개원 대출을 갚아보세요. 운영 자금이 ${won(diffOf().limit)} 아래로 떨어지면 폐업이에요 (지금 난이도: ${diffOf().name}).</li><li><b>자동 운영</b>: 부원장이 1명 이상이면 켤 수 있어요. 원장님은 진료하지 않고 시간이 저절로 흘러가요. 부원장들이 모든 환자를 보고, 하루가 끝나면 결산이 쌓이고 다음 날로 넘어가요. 일시정지와 1·3·8배속을 쓸 수 있어요. 금수저 모드는 처음부터 자동 운영으로 시작해요.</li><li>VAS 5 이상인 초진 환자는 접수 후 바로 아픈 부위 X-ray를 찍어요 (X-ray와 방사선사가 있을 때). 주사 없이 물리치료나 약만 원하는 환자는 '보존치료 희망'으로 표시되고 X-ray를 찍지 않아요. 이런 환자에게 주사·시술을 하면 만족도가 떨어져요.</li></ul>
+      <p class="lead">매출에는 건강보험 공단 부담금이 포함된 게임용 금액이에요.</p></div>
+      <div class="row"><button class="btn primary" data-act="close">알겠어요</button></div>`,true);
+  }else if(m.type==='rewards'){
+    const u=adUses();
+    h=modal(`<h2>🎁 광고 보고 보상 받기</h2><p class="lead">짧은 광고를 끝까지 보면 보상을 받아요. 횟수는 매일 다시 채워져요.</p>
+      <div class="opts">${Object.entries(REWARDS).map(([k,r])=>{const left=r.max-u[k];
+        return`<button class="btn" data-act="ad" data-arg="${k}" ${left<=0||Ads.busy?'disabled':''}>▶ ${r.label} <span class="lead">· 오늘 ${left}/${r.max}회 남음</span></button>`;}).join('')}</div>
+      <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`);
+  }else if(m.type==='confirmNew'){
+    h=modal(`<h2>새 게임을 시작할까요?</h2><p>지금 의원의 진행 상황이 모두 지워져요.</p>
+      <div class="row"><button class="btn" data-act="close">계속 진료하기</button><button class="btn danger" data-act="restart">처음부터 다시</button></div>`);
+  }else if(m.type==='loanDone'){
+    h=modal(`<h2>개원 대출 ${won(diffOf().loan)} 완납!</h2><p>개원 ${state.day}일 만에 빚 없는 의원이 됐어요. 누적 진료 ${state.totalTreated}명, 평점 ${state.rating.toFixed(2)}.</p><p class="lead">이제 진짜 명의를 향해 계속 키워보세요.</p>
+      <div class="row"><button class="btn primary" data-act="close">계속하기</button></div>`);
+  }
+  mroot.innerHTML=h;
+}
+function renderShop(){
+  const s=state,tab=s.shopTab;
+  const tabs=[['equip','장비·시설'],['staff','직원 채용'],['grow','홍보·연수'],['loan','대출 상환']].map(([k,l])=>`<button class="btn sm" data-act="shoptab" data-arg="${k}" aria-pressed="${tab===k}">${l}</button>`).join('');
+  let body='';
+  if(tab==='equip')body=EQUIP.map(e=>{const own=s.owned[e.k];const needReq=e.req&&!s.owned[e.req];
+    if(e.max){const n=own||0;return`<div class="item"><h3>${e.name}</h3><p>${e.desc}</p><span class="price">${won(e.cost)} · 보유 ${n}/${e.max}</span>
+     ${n>=e.max?'<span class="own">최대 보유</span>':`<button class="btn sm primary" data-act="buy" data-arg="${e.k}" ${s.money<e.cost?'disabled':''}>${n?'1대 더 들이기':'구입'}</button>`}</div>`;}
+    return`<div class="item"><h3>${e.name}</h3><p>${e.desc}</p><span class="price">${won(e.cost)}</span>
+     ${own?'<span class="own">보유 중</span>':`<button class="btn sm primary" data-act="buy" data-arg="${e.k}" ${s.money<e.cost||needReq?'disabled':''}>${needReq?REQ_NAME[e.req]+' 먼저':'구입'}</button>`}</div>`;}).join('');
+  if(tab==='staff')body=STAFF.map(e=>`<div class="item"><h3>${e.name}</h3><p>${e.desc}</p><span class="price">일급 ${won(e.wage)}</span>
+     <div class="ctl"><button class="btn sm" data-act="fire" data-arg="${e.k}" ${s.staff[e.k]<=e.min?'disabled':''} aria-label="${e.name} 줄이기">−</button><span class="cnt">${s.staff[e.k]} / ${e.max}명</span><button class="btn sm primary" data-act="hire" data-arg="${e.k}" ${s.staff[e.k]>=e.max?'disabled':''} aria-label="${e.name} 채용">+</button></div></div>`).join('');
+  if(tab==='grow')body=Object.entries(GROW).map(([k,g])=>{const lv=s[k];const c=g.costs[lv];
+    return`<div class="item"><h3>${g.name}</h3><p>${g.desc}</p><span class="price">현재 ${lv}단계 / ${g.costs.length}단계</span>
+     ${c===undefined?'<span class="own">최고 단계</span>':`<button class="btn sm primary" data-act="grow" data-arg="${k}" ${s.money<c?'disabled':''}>${lv+1}단계 · ${won(c)}</button>`}</div>`;}).join('');
+  if(tab==='loan')body=s.loan<=0?'<div class="item"><h3>대출 완납</h3><p>빚 없는 의원이에요!</p></div>':[1e7,5e7,s.loan].map((a,i)=>{const amt=Math.min(a,s.loan);
+    return`<div class="item"><h3>${i===2?'전액 상환':won(amt)+' 상환'}</h3><p>남은 대출 ${won(s.loan)} · 하루 이자 ${won(dailyInterest())}</p><span class="price">${won(amt)}</span>
+     <button class="btn sm primary" data-act="repay" data-arg="${amt}" ${s.money<amt?'disabled':''}>상환</button></div>`;}).join('');
+  const wages=STAFF.reduce((a,x)=>a+x.wage*s.staff[x.k],0);
+  return`<h2>투자·채용</h2><p class="lead">운영 자금 <b class="${s.money<0?'neg':''}">${won(s.money)}</b> · 하루 고정비 약 ${won(Math.max(0,RENT-s.rentDiscount)+wages+OPEX+dailyInterest())} (인건비 ${won(wages)})</p>
+    <div class="tabs">${tabs}</div><div class="shop">${body}</div>
+    <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`;
+}
+
+/* ---------- actions ---------- */
+function chooseEvent(i){
+  const T=state.today,e=EVENTS.find(x=>x.id===state.modal.id),o=e.opts[i];
+  if(o.cost)state.money-=o.cost;o.fx(state,T);T.pending=false;state.modal=null;genArrivals();toast(val(o.res));
+}
+/* ---------- auto mode: time runs by itself, associates see every patient ---------- */
+/* ---------- rewarded ads (Android app only; hidden on the web) ---------- */
+// 출시 전에 AdMob에서 받은 실제 광고 단위 ID로 바꾸고 testing을 false로.
+const AD_CFG={rewardId:'ca-app-pub-3940256099942544/5224354917',testing:true};
+const Ads={on:false,busy:false,A:null};
+(async()=>{try{const C=window.Capacitor;if(!C||!C.isNativePlatform||!C.isNativePlatform())return;
+  const A=C.registerPlugin('AdMob');await A.initialize({initializeForTesting:AD_CFG.testing});Ads.A=A;Ads.on=true;if(state)render();}catch(e){}})();
+async function showRewarded(){
+  const A=Ads.A;if(!A||Ads.busy)return false;Ads.busy=true;let got=false;const hs=[];
+  try{
+    hs.push(await A.addListener('onRewardedVideoAdReward',()=>{got=true;}));
+    const closed=new Promise(res=>{A.addListener('onRewardedVideoAdDismissed',res).then(h=>hs.push(h));A.addListener('onRewardedVideoAdFailedToShow',res).then(h=>hs.push(h));});
+    await A.prepareRewardVideoAd({adId:AD_CFG.rewardId,isTesting:AD_CFG.testing});
+    const item=await A.showRewardVideoAd();if(item&&item.amount!=null)got=true;
+    await Promise.race([closed,new Promise(r=>setTimeout(r,1500))]);
+  }catch(e){toast('광고를 불러오지 못했어요. 잠시 뒤에 다시 해주세요.');}
+  hs.forEach(h=>{try{h.remove();}catch(e){}});Ads.busy=false;return got;
+}
+const AD_CASH=3e6,AD_REVIVE=5e7;
+function adUses(){if(!state.adUses||state.adUses.day!==state.day)state.adUses={day:state.day,fatigue:0,cash:0,double:0};return state.adUses;}
+const REWARDS={fatigue:{label:'원장 체력 +30',max:3},cash:{label:`운영 자금 +${won(AD_CASH)}`,max:2}};
+async function watchAd(kind){
+  const ok=await showRewarded();if(!ok){render();return;}
+  const u=adUses();
+  if(kind==='fatigue'){u.fatigue++;state.fatigue=Math.min(maxFat(),state.fatigue+30);toast('체력 +30 회복!');}
+  if(kind==='cash'){u.cash++;state.money+=AD_CASH;toast(`운영 자금 +${won(AD_CASH)}`);}
+  if(kind==='double'){const net=state.today&&state.today.summary?state.today.summary.net:0;const b=Math.min(Math.max(0,net),5e6);u.double++;state.money+=b;toast(`보너스 +${won(b)}`);}
+  if(kind==='revive'){state.reviveUsed=true;state.money+=AD_REVIVE;state.modal={type:'summary'};toast(`긴급 자금 +${won(AD_REVIVE)}. 다시 힘내봐요!`);}
+  save();render();
+}
+let pointerDown=false;
+document.addEventListener('pointerdown',()=>{pointerDown=true;},true);
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{pointerDown=false;},true));
+function autoTick(){
+  if(!state||!state.auto||state.autoPaused||pointerDown||Ads.busy)return;
+  const T=state.today;if(!T)return;
+  if(state.modal){if(state.modal.type!=='event')return;
+    const e=EVENTS.find(x=>x.id===state.modal.id);toast(`[아침 일정] ${val(e.title)} → ${e.opts[0].label}`);chooseEvent(0);save();render();return;}
+  if(T.ended){nextDay();save();render();return;}
+  if(T.time>=T.close){
+    endDay();const S=T.summary;
+    state.autoLog=(state.autoLog||[]).concat([{day:state.day,dow:DOW[dowOf(state.day)],served:T.served,lost:T.lost,revenue:T.revenue,net:S.net}]).slice(-14);
+    if(state.modal&&state.modal.type==='gameover'){state.auto=false;}
+    else{state.modal=null;if(S.newTitle)toast(`새 칭호: ${S.newTitle}`);}
+    save();render();return;}
+  T.sel=null;T.result=null;
+  advance(Math.min(8*(state.autoSpeed||1),Math.max(1,T.close-T.time)));
+  render();
+}
+setInterval(autoTick,1000);
+setInterval(()=>{if(state&&state.auto)save();},5000);
+function renderAuto(){
+  const T=state.today,s=state;const log=(s.autoLog||[]).slice().reverse().slice(0,7);
+  const lostRate=T.served+T.lost?T.lost/(T.served+T.lost):0;
+  return`<h2>자동 운영 중 <span>${clock(T.time)} · 부원장 ${s.staff.assoc}명</span></h2>
+   <div class="auto-ctl">
+     <button class="btn ${s.autoPaused?'primary':''}" data-act="autopause">${s.autoPaused?'▶ 재개':'⏸ 일시정지'}</button>
+     <div class="seg" role="group" aria-label="속도">${[1,3,8].map(v=>`<button class="btn sm" data-act="autospeed" data-arg="${v}" aria-pressed="${(s.autoSpeed||1)===v}">${v}배속</button>`).join('')}</div>
+     <button class="btn ghost" data-act="auto">자동 운영 끄기</button>
+   </div>
+   <div class="sumgrid">
+     <div class="stat"><span class="k">오늘 진료</span><span class="v">${T.served}명</span></div>
+     <div class="stat"><span class="k">돌아간 환자</span><span class="v ${T.lost?'neg':''}">${T.lost}명</span></div>
+     <div class="stat"><span class="k">대기 중</span><span class="v">${T.queue.length}명</span></div>
+     <div class="stat"><span class="k">오늘 매출</span><span class="v">${won(T.revenue)}</span></div>
+   </div>
+   ${lostRate>.2?`<div class="banner warn">기다리다 가는 환자가 많아요. 부원장이나 원무과 직원을 늘려보세요.</div>`:''}
+   <h3 class="tx-h">최근 결산</h3>
+   ${log.length?`<div style="overflow-x:auto"><table class="ledger auto-log"><thead><tr><td>일차</td><td>진료</td><td>이탈</td><td>매출</td><td>순이익</td></tr></thead><tbody>
+     ${log.map(r=>`<tr><td>${r.day}일차 (${r.dow})</td><td>${r.served}명</td><td>${r.lost}명</td><td>${won(r.revenue)}</td><td class="${r.net<0?'neg':''}">${won(r.net)}</td></tr>`).join('')}</tbody></table></div>`
+     :'<p class="hint">하루가 끝나면 여기에 결산이 쌓여요.</p>'}
+   <p class="hint">원장님은 진료하지 않아요. 아침 이벤트는 첫 번째 선택지로 자동 처리돼요. 투자·채용 창을 여는 동안은 시간이 멈춰요.</p>`;
+}
+function openOverlay(type){state.modalBack=state.modal&&state.modal.type!==type?state.modal:null;state.modal={type};}
+function act(a,arg){
+  const T=state.today;
+  if(T&&T.grading&&!['shop','help','close','shoptab','cancelai'].includes(a))return;
+  switch(a){
+    case'mode':state.mode=arg==='quick'?'quick':'ai';if(T)T.aiError='';break;
+    case'ai':aiTreat();return;
+    case'ddx':{const p=cur();if(p){const L=p.picks||[];const i=L.indexOf(arg);if(i>=0)L.splice(i,1);else if(L.length<3)L.push(arg);p.picks=L;}break;}
+    case'ddxclear':{const p=cur();if(p)p.picks=[];break;}
+    case'chip':{const p=cur();if(p)toggleChip(p,TX_CHIPS[+arg]);if(T)T.aiError='';break;}
+    case'chipagain':{const p=cur();const h=p&&(p.history||[])[p.history.length-1];if(h){const l=h.tx.slice(0,3);while(l.length<3)l.push('');p.draftTxs=l;if(!(p.picks||[]).length&&h.picks)p.picks=[...h.picks];}break;}
+    case'cancelai':if(aiCtl)aiCtl.abort();if(T)T.grading=null;break;
+    case'sel':if(T&&!T.result&&!state.auto)T.sel=+arg;break;
+    case'exam':exam();break;
+    case'tx':treat(arg);break;
+    case'txsel':{const p=cur();if(p){const L=p.txSel||[];const i=L.indexOf(arg);if(i>=0)L.splice(i,1);else if(L.length<3&&!txBlock(arg))L.push(arg);else if(L.length>=3)toast('치료는 최대 3개까지 고를 수 있어요.');p.txSel=L;}break;}
+    case'txdone':{const p=cur();if(p&&(p.txSel||[]).length)treatMulti(p.txSel);break;}
+    case'next':nextPatient();break;
+    case'wait':waitNext();break;
+    case'endday':endDay();break;
+    case'nextday':nextDay();break;
+    case'start':{const v=(document.getElementById('clinic-name')||{}).value;state.clinic=(v&&v.trim())||'김원장 통증의학과';state.modal=null;break;}
+    case'evt':chooseEvent(+arg);break;
+    case'auto':{if(state.auto){state.auto=false;toast('자동 운영을 껐어요. 원장님이 직접 진료해요.');}
+      else if(!(state.staff.assoc>0)){toast('부원장을 1명 이상 채용해야 자동 운영을 켤 수 있어요.');}
+      else{state.auto=true;state.autoPaused=false;if(T){T.sel=null;T.result=null;}toast('자동 운영을 시작해요. 부원장들이 진료해요.');}break;}
+    case'autopause':state.autoPaused=!state.autoPaused;break;
+    case'autospeed':state.autoSpeed=+arg||1;state.autoPaused=false;break;
+    case'shop':openOverlay('shop');break;
+    case'rewards':openOverlay('rewards');break;
+    case'ad':if(Ads.on&&!Ads.busy)watchAd(arg);return;
+    case'help':{if(state.modal&&state.modal.type==='intro'){const v=(document.getElementById('clinic-name')||{}).value;if(v&&v.trim())state.clinic=v.trim();}openOverlay('help');break;}
+    case'new':openOverlay('confirmNew');break;
+    case'close':state.modal=state.modalBack||null;state.modalBack=null;break;
+    case'restart':newGame(state.clinic,state.diff);state.modal={type:'intro'};break;
+    case'diff':{const v=(document.getElementById('clinic-name')||{}).value;newGame((v&&v.trim())||state.clinic,arg);state.modal={type:'intro'};break;}
+    case'shoptab':state.shopTab=arg;break;
+    case'buy':{const e=EQUIP.find(x=>x.k===arg);const n=state.owned[e.k]||0;
+      if(state.money>=e.cost&&(e.max?n<e.max:!n)){state.money-=e.cost;state.owned[e.k]=e.max?n+1:true;toast(`${e.name} 도입 완료!`);log(`<b>${e.name}</b> 도입 (-${won(e.cost)})`);}break;}
+    case'hire':{const e=STAFF.find(x=>x.k===arg);if(state.staff[e.k]<e.max){state.staff[e.k]++;toast(`${e.name} 1명을 채용했어요.`);}break;}
+    case'fire':{const e=STAFF.find(x=>x.k===arg);if(state.staff[e.k]>e.min){state.staff[e.k]--;toast(`${e.name} 인원을 줄였어요.`);}break;}
+    case'grow':{const g=GROW[arg];const c=g.costs[state[arg]];if(c!==undefined&&state.money>=c){state.money-=c;state[arg]++;toast(`${g.name} ${state[arg]}단계!`);}break;}
+    case'repay':{const amt=Math.min(+arg,state.loan);if(state.money>=amt){state.money-=amt;state.loan-=amt;toast(`대출 ${won(amt)} 상환`);
+      if(state.loan<=0&&!state.loanDone){state.loanDone=true;state.modalBack=null;state.modal={type:'loanDone'};}}break;}
+  }
+  save();render();
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;act(b.dataset.act,b.dataset.arg);});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing)return;
+  if(e.target.id==='clinic-name')act('start');
+  else if(e.target.id==='dx-input'||/^tx-[123]$/.test(e.target.id)){e.preventDefault();act('ai');}});
+document.addEventListener('input',e=>{const p=state&&cur();if(!p)return;
+  if(e.target.id==='dx-input')p.draftDx=e.target.value;
+  const m=/^tx-([123])$/.exec(e.target.id);
+  if(m){if(!Array.isArray(p.draftTxs))p.draftTxs=['','',''];p.draftTxs[+m[1]-1]=e.target.value;}});
+document.addEventListener('change',()=>save());
+
+/* ---------- X-ray images (procedural) ---------- */
+const XR_REGION={cspine:'경추 측면',lspine:'요추 측면',tspine:'흉추 측면',shoulder:'견관절 AP',knee:'슬관절 AP',foot:'족부 측면',elbow:'주관절 AP',wrist:'수근관절 PA'};
+const XR={
+ neck:{r:'cspine',txt:'C5-6 추간판 간격 감소, 경추 전만 소실 (일자목)',f:{narrow:'C5',straight:1}},
+ lumbar:{r:'lspine',txt:'L4-5 추간판 간격 경도 감소',f:{narrow:'L4'}},
+ stenosis:{r:'lspine',txt:'다분절 퇴행성 변화와 골극, L4 1도 전방전위증',f:{osteo:1,slip:4,narrow:'L4'}},
+ facet:{r:'lspine',txt:'L4-5, L5-S1 후관절 비후와 경화',f:{facet:1}},
+ cauda:{r:'lspine',txt:'L4-5 추간판 간격 감소. X-ray만으로는 신경 압박을 확인할 수 없음',f:{narrow:'L4'}},
+ fracture:{r:'lspine',txt:'L1 척추체 전방 높이 약 30% 감소 (쐐기 변형), 골감소',f:{wedge:1,osteopenia:1}},
+ tumor:{r:'lspine',txt:'L3 척추체 음영 저하, 척추경 소실 의심',f:{dark:3}},
+ infect:{r:'lspine',txt:'L4-5 종판 불규칙, 추간판 간격 감소',f:{narrow:'L4',irregular:'L4'}},
+ discNeck:{r:'cspine',txt:'경추 전만 감소, C5-6 추간판 간격 경도 감소',f:{straight:1,narrow:'C5'}},
+ discLow:{r:'lspine',txt:'L4-5 추간판 간격 경도 감소, 그 외 특이 소견 없음',f:{narrow:'L4'}},
+ occipital:{r:'cspine',txt:'특이 소견 없음',f:{}},
+ phn:{r:'tspine',txt:'특이 소견 없음',f:{}},
+ frozen:{r:'shoulder',txt:'골 이상 없음 (관절낭 유착은 X-ray로 보이지 않음)',f:{}},
+ rotator:{r:'shoulder',txt:'대결절 경화, 견봉하 골극',f:{spur:1,sclero:1}},
+ knee:{r:'knee',txt:'내측 관절 간격 협소, 골극 (K-L 2~3등급)',f:{narrow:1,osteo:1}},
+ plantar:{r:'foot',txt:'종골 하방 골극 (heel spur)',f:{spur:1}},
+ elbow:{r:'elbow',txt:'특이 소견 없음',f:{}},
+ cts:{r:'wrist',txt:'특이 소견 없음',f:{}}
+};
+function xrayBox(p){const x=XR[p.dx];if(!x)return'';
+  return`<div class="xray-box"><canvas class="xr" width="440" height="440" data-dx="${p.dx}" data-seed="${p.id}" role="img" aria-label="${XR_REGION[x.r]} X-ray 영상"></canvas>
+   <div><h3>X-ray · ${XR_REGION[x.r]}</h3><p>판독: ${x.txt}</p><p class="hint">VAS 5 이상 초진이라 접수 후 바로 촬영했어요. 촬영료 ${won(TX.xray.price)}</p></div></div>`;}
+function rng(seed){let a=(seed*2654435761)>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function rr(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);c.fill();}
+function xSpine(c,x,bone,rnd){
+  const f=x.f,r=x.r;
+  const names=r==='cspine'?['C2','C3','C4','C5','C6','C7']:r==='tspine'?['T5','T6','T7','T8','T9','T10']:['T12','L1','L2','L3','L4','L5'];
+  const n=names.length,bw=r==='cspine'?30:r==='tspine'?34:42,bh=r==='cspine'?20:22,gap0=r==='cspine'?9:8;
+  const curve=f.straight?2:(r==='tspine'?-10:14);
+  let y=r==='lspine'?12:22;
+  if(r==='tspine'){c.save();c.shadowBlur=0;c.strokeStyle='rgba(200,205,210,.16)';c.lineWidth=5;
+    for(let i=0;i<7;i++){c.beginPath();c.moveTo(150,26+i*26);c.quadraticCurveTo(205,36+i*26,218,80+i*26);c.stroke();}c.restore();}
+  names.forEach((nm,i)=>{
+    const off=-Math.sin((i+.5)/n*Math.PI)*curve;const cx=105+off+(f.slip===i?7:0);const x0=cx-bw/2;
+    bone(f.dark===i?.38:f.osteopenia?.6:.86);
+    if(f.wedge===i){c.beginPath();c.moveTo(x0,y+bh*.35);c.lineTo(x0+bw,y);c.lineTo(x0+bw,y+bh);c.lineTo(x0,y+bh);c.closePath();c.fill();}
+    else rr(c,x0,y,bw,bh,3);
+    bone(f.facet&&i>=n-2?1:.68);rr(c,x0+bw+3,y+3,10,bh*.6,2);
+    if(f.dark===i){c.save();c.shadowBlur=0;c.fillStyle='rgba(5,6,7,.85)';rr(c,x0+bw+4,y+4,8,bh*.5,2);c.restore();}
+    bone(.7);c.beginPath();c.moveTo(x0+bw+12,y+bh*.4);c.lineTo(x0+bw+30,y+bh*.75);c.lineTo(x0+bw+27,y+bh);c.lineTo(x0+bw+10,y+bh*.8);c.closePath();c.fill();
+    if(f.osteo){bone(.82);c.beginPath();c.moveTo(x0,y+bh-4);c.lineTo(x0-6,y+bh+3);c.lineTo(x0+2,y+bh);c.fill();c.beginPath();c.moveTo(x0,y+4);c.lineTo(x0-5,y-3);c.lineTo(x0+2,y);c.fill();}
+    c.save();c.shadowBlur=0;c.fillStyle='rgba(255,255,255,.35)';c.font='8px sans-serif';c.fillText(nm,x0-26,y+bh/2+3);c.restore();
+    const gap=f.narrow===nm?gap0*.3:gap0;
+    if(f.irregular===nm){c.save();c.shadowBlur=0;c.fillStyle='rgba(5,6,7,.9)';for(let k=0;k<6;k++)c.fillRect(x0+4+k*6,y+bh-2-rnd()*3,4,3);c.restore();}
+    y+=bh+gap;
+  });
+  if(r==='lspine'){bone(.8);c.beginPath();c.moveTo(84,y);c.lineTo(132,y-3);c.lineTo(150,y+40);c.lineTo(100,y+50);c.closePath();c.fill();
+    c.save();c.shadowBlur=0;c.fillStyle='rgba(255,255,255,.35)';c.font='8px sans-serif';c.fillText('S1',58,y+12);c.restore();}
+}
+function xShoulder(c,x,bone){const f=x.f;
+  bone(.5);c.beginPath();c.moveTo(18,60);c.lineTo(95,76);c.lineTo(58,205);c.closePath();c.fill();
+  bone(.85);c.beginPath();c.moveTo(8,46);c.quadraticCurveTo(80,28,152,50);c.lineTo(152,60);c.quadraticCurveTo(80,40,8,58);c.closePath();c.fill();
+  bone(.8);rr(c,70,62,92,14,7);bone(.7);rr(c,84,92,10,50,5);
+  bone(.88);c.beginPath();c.arc(126,118,34,0,Math.PI*2);c.fill();rr(c,108,130,38,95,10);
+  if(f.sclero){c.fillStyle='rgba(255,255,255,.97)';c.beginPath();c.ellipse(156,104,5,10,0,0,Math.PI*2);c.fill();}
+  if(f.spur){bone(1);c.beginPath();c.moveTo(146,76);c.lineTo(160,76);c.lineTo(154,88);c.closePath();c.fill();}
+}
+function xKnee(c,x,bone){const f=x.f;
+  bone(.86);rr(c,82,0,56,72,6);c.beginPath();c.ellipse(90,94,24,20,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(132,94,24,20,0,0,Math.PI*2);c.fill();
+  bone(.3);c.beginPath();c.arc(111,80,17,0,Math.PI*2);c.fill();
+  const gm=f.narrow?1:9,gl=9;bone(.86);
+  c.beginPath();c.moveTo(66,114+gm);c.lineTo(110,114+gm/2+gl/2);c.lineTo(156,114+gl);c.lineTo(150,142);c.lineTo(130,152);c.lineTo(130,220);c.lineTo(92,220);c.lineTo(92,152);c.lineTo(72,142);c.closePath();c.fill();
+  bone(.72);rr(c,158,140,12,80,5);
+  if(f.osteo){bone(1);[[66,114+gm,-1],[156,114+gl,1],[66,98,-1],[156,98,1]].forEach(([px,py,s])=>{c.beginPath();c.moveTo(px,py-4);c.lineTo(px+8*s,py);c.lineTo(px,py+4);c.closePath();c.fill();});}
+}
+function xFoot(c,x,bone){const f=x.f;
+  bone(.82);rr(c,62,0,26,80,8);bone(.58);rr(c,92,0,10,78,4);
+  bone(.86);c.beginPath();c.ellipse(86,96,26,16,0,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(70,138,42,22,-.15,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(122,108,14,12,0,0,Math.PI*2);c.fill();
+  bone(.8);for(let i=0;i<4;i++){c.save();c.translate(135,110+i*7);c.rotate(.2+i*.06);rr(c,0,-3,82,7,3);c.restore();}
+  if(f.spur){bone(1);c.beginPath();c.moveTo(80,157);c.lineTo(99,160);c.lineTo(84,150);c.closePath();c.fill();}
+}
+function xElbow(c,x,bone){bone(.85);rr(c,90,0,40,92,8);c.beginPath();c.ellipse(110,100,40,18,0,0,Math.PI*2);c.fill();rr(c,76,124,24,100,6);rr(c,112,120,26,104,7);}
+function xWrist(c,x,bone){bone(.85);rr(c,70,152,50,70,8);bone(.72);rr(c,128,160,24,62,6);
+  bone(.85);[[78,120],[100,118],[122,120],[140,124],[82,98],[102,96],[122,98],[138,102]].forEach(([a,b])=>rr(c,a,b,18,18,6));
+  bone(.8);for(let i=0;i<5;i++)rr(c,64+i*20,i===0?40:8,12,i===0?56:84,5);}
+function drawXray(cv,dx,seed){
+  const x=XR[dx];if(!x)return;const c=cv.getContext('2d');const rnd=rng(seed);
+  c.setTransform(cv.width/220,0,0,cv.height/220,0,0);
+  c.fillStyle='#050607';c.fillRect(0,0,220,220);
+  const g=c.createRadialGradient(110,110,20,110,110,130);g.addColorStop(0,'rgba(120,130,135,.3)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,220,220);
+  c.save();c.shadowColor='rgba(235,240,245,.55)';c.shadowBlur=6;
+  const bone=a=>{c.fillStyle=`rgba(222,228,232,${a})`;};
+  ({cspine:xSpine,lspine:xSpine,tspine:xSpine,shoulder:xShoulder,knee:xKnee,foot:xFoot,elbow:xElbow,wrist:xWrist})[x.r](c,x,bone,rnd);
+  c.restore();
+  for(let i=0;i<900;i++){c.fillStyle=`rgba(255,255,255,${rnd()*.06})`;c.fillRect(rnd()*220,rnd()*220,1,1);}
+  const v=c.createRadialGradient(110,110,70,110,110,165);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.75)');c.fillStyle=v;c.fillRect(0,0,220,220);
+  c.fillStyle='rgba(255,255,255,.85)';c.font='bold 12px sans-serif';c.fillText('R',10,20);
+  c.font='9px sans-serif';c.fillStyle='rgba(255,255,255,.6)';c.fillText(XR_REGION[x.r],10,210);
+}
+function drawXrays(){app.querySelectorAll('canvas.xr').forEach(cv=>drawXray(cv,cv.dataset.dx,+cv.dataset.seed));}
+
+/* ---------- pixel clinic scene ---------- */
+const SW=320,SH=150,CY=76;
+const REDUCED=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ROOM={
+ exam:{x:4,y:4,w:70,h:58,dx:39,top:true,floor:['#cde0db','#c4d8d3']},
+ xray:{x:78,y:4,w:50,h:58,dx:103,top:true,floor:['#c9cfd7','#c1c8d1']},
+ proc:{x:132,y:4,w:60,h:58,dx:162,top:true,floor:['#d4dbe7','#cbd3e0']},
+ pt:{x:196,y:4,w:120,h:58,dx:226,top:true,floor:['#e3d6bd','#dccfb5']},
+ manual:{x:240,y:92,w:76,h:54,dx:262,top:false,floor:['#e8d4c0','#e0cbb6']}
+};
+const inside=k=>{const R=ROOM[k];return R.top?{x:R.dx,y:R.y+R.h-5}:{x:R.dx,y:R.y+5};};
+const outside=k=>{const R=ROOM[k];return R.top?{x:R.dx,y:R.y+R.h+5}:{x:R.dx,y:R.y-5};};
+const SPOT={door:{x:10,y:147},recept:{x:30,y:119},xray:{x:104,y:32,room:'xray'},examChair:{x:55,y:38,room:'exam'},
+ doc:{x:24,y:32,room:'exam'},examChair2:{x:54,y:52,room:'exam'},docProc:{x:150,y:34,room:'proc'},proc:{x:172,y:32,room:'proc'}};
+const CHAIRS=[];for(let r=0;r<2;r++)for(let i=0;i<11;i++)CHAIRS.push({x:100+i*12,y:122+r*20});
+const PT_BEDS=[212,240,268,296].map(x=>({x,y:30,room:'pt'}));
+const MAN_BEDS=[{x:258,y:120,room:'manual'},{x:294,y:120,room:'manual'}];
+const STAFF_SPOTS={
+ reception:[{x:20,y:101},{x:34,y:101},{x:48,y:101}],counselor:[{x:77,y:101}],
+ nurse:[{x:146,y:50,room:'proc'},{x:184,y:52,room:'proc'},{x:142,y:22,room:'proc'}],
+ radio:[{x:88,y:52,room:'xray'},{x:120,y:52,room:'xray'}],
+ assoc:[{x:66,y:24,room:'exam'},{x:12,y:40,room:'exam'}],
+ pt:[{x:214,y:52,room:'pt'},{x:254,y:52,room:'pt'},{x:296,y:52,room:'pt'},{x:236,y:52,room:'pt'},{x:276,y:52,room:'pt'}]
+};
+const LOOK={doctor:{shirt:'#f4f6f6',pants:'#3b4a5a',hair:'#2a221d',skin:'#f1c9a5',coat:1},
+ reception:{shirt:'#2f8f86',pants:'#2b3440',hair:'#3a2a20',skin:'#f1c9a5',long:1},
+ counselor:{shirt:'#7a5aa6',pants:'#2b3440',hair:'#4a3020',skin:'#e8b98f',long:1},
+ nurse:{shirt:'#e88fa6',pants:'#e88fa6',hair:'#2a1f1a',skin:'#f1c9a5',cap:'#ffffff'},
+ radio:{shirt:'#6f8297',pants:'#2f3a46',hair:'#1f1a17',skin:'#e8b98f'},
+ pt:{shirt:'#1f3b64',pants:'#1f3b64',hair:'#2a221d',skin:'#e8b98f'},
+ assoc:{shirt:'#eef2f2',pants:'#5a4636',hair:'#5a3a22',skin:'#e8b98f',coat:1}};
+const scene={el:null,cv:null,ctx:null,bg:null,day:null,ps:new Map(),staff:[],doc:null,sig:'',slots:Array(22).fill(null),t:0,last:0};
+function patientLook(p){const r=rng(p.id+7);
+  return{shirt:['#d9534f','#f0ad4e','#5bc0de','#5cb85c','#9b59b6','#e67e22','#34495e','#c0392b','#16a085'][Math.floor(r()*9)],
+    pants:['#3b4a5a','#5a4636','#2f3a46','#6b6b6b'][Math.floor(r()*4)],
+    hair:p.age>=62?'#cfcfcf':['#2a221d','#3a2a20','#1f1a17','#5a3a22'][Math.floor(r()*4)],
+    skin:['#f1c9a5','#e8b98f','#d9a477'][Math.floor(r()*3)],long:p.sex==='F'};}
+function mkSprite(pos,look){return{x:pos.x,y:pos.y,room:pos.room||null,path:[],plan:[],wait:0,look,face:1,moving:false};}
+function routeTo(sp,t){
+  if(!sp.room&&!t.room&&sp.y>88&&t.y>88){sp.path=[{x:t.x,y:t.y,room:null}];return;}
+  if(sp.room&&sp.room===t.room){sp.path=[{x:t.x,y:t.y,room:t.room}];return;}
+  const p=[];
+  if(sp.room){p.push({...inside(sp.room),room:sp.room},{...outside(sp.room),room:null});}
+  const fx=sp.room?ROOM[sp.room].dx:sp.x,tx=t.room?ROOM[t.room].dx:t.x;
+  p.push({x:fx,y:CY,room:null},{x:tx,y:CY,room:null});
+  if(t.room)p.push({...outside(t.room),room:null},{...inside(t.room),room:t.room});
+  p.push({x:t.x,y:t.y,room:t.room||null});
+  sp.path=p;
+}
+function stepSprite(sp,dt){
+  if(sp.wait>0){sp.wait-=dt;sp.moving=false;return;}
+  if(!sp.path.length){
+    if(!sp.plan.length){sp.moving=false;return;}
+    const nx=sp.plan.shift();routeTo(sp,nx.spot);sp.pw=nx.wait||0;sp.pexit=!!nx.exit;
+  }
+  const p=sp.path[0],dx=p.x-sp.x,dy=p.y-sp.y,d=Math.hypot(dx,dy),v=(REDUCED?5000:40)*dt;
+  if(d<=v){sp.x=p.x;sp.y=p.y;sp.room=p.room;sp.path.shift();
+    if(!sp.path.length){sp.wait=sp.pw||0;sp.pw=0;if(sp.pexit)sp.gone=true;}}
+  else{sp.x+=dx/d*v;sp.y+=dy/d*v;if(Math.abs(dx)>.3)sp.face=dx<0?-1:1;}
+  sp.moving=d>.5;
+}
+function takeSlot(sp){if(sp.slot!=null)return sp.slot;let i=scene.slots.indexOf(null);if(i<0)i=RI(0,CHAIRS.length-1);scene.slots[i]=sp.id;sp.slot=i;return i;}
+function freeSlot(sp){if(sp.slot!=null&&scene.slots[sp.slot]===sp.id)scene.slots[sp.slot]=null;sp.slot=null;}
+function buildStaff(){
+  scene.doc=mkSprite(SPOT.doc,LOOK.doctor);scene.staff=[];
+  Object.keys(STAFF_SPOTS).forEach(k=>{const n=state.staff[k]||0;for(let i=0;i<n;i++){let pos=STAFF_SPOTS[k][i]||STAFF_SPOTS[k][0];
+    if(k==='pt'&&i===2&&state.owned.manualRoom)pos={x:276,y:108,room:'manual'};
+    scene.staff.push(mkSprite(pos,LOOK[k]));}});
+}
+function treatPlan(tids){const out=[];
+  if(tids.includes('xray'))out.push({spot:SPOT.xray,wait:1});
+  if(tids.some(k=>TX[k].proc))out.push({spot:SPOT.proc,wait:2.4});
+  if(tids.includes('manual')&&state.owned.manualRoom)out.push({spot:pick(MAN_BEDS),wait:2.4});
+  if(tids.some(k=>k==='pt'||k==='eswt'))out.push({spot:pick(PT_BEDS),wait:2.4});
+  return out;}
+function sceneLabels(){
+  const o=state.owned;const L=[[ROOM.exam,'진료실'],[ROOM.xray,o.xray?'X-ray실':'X-ray실 (비어 있음)'],[ROOM.proc,o.carm?'시술실 · C-arm':'시술실'],
+    [ROOM.pt,'물리치료실'+(o.eswt?` · 충격파 ${o.eswt}`:'')],[ROOM.manual,o.manualRoom?'도수치료실':'창고'],[{x:8,y:84},'접수'],[{x:96,y:100},'대기실']];
+  return L.map(([R,t])=>`<span class="sl" style="left:${(R.x+2)/SW*100}%;top:${(R.y+2)/SH*100}%">${t}</span>`).join('');
+}
+function drawBg(){
+  const b=document.createElement('canvas');b.width=SW;b.height=SH;const c=b.getContext('2d');const o=state.owned;
+  for(let y=0;y<SH;y+=8)for(let x=0;x<SW;x+=8){c.fillStyle=((x+y)/8)%2?'#d8d0bf':'#d1c8b6';c.fillRect(x,y,8,8);}
+  c.fillStyle='#c6bfae';c.fillRect(0,64,SW,24);
+  Object.entries(ROOM).forEach(([k,R])=>{
+    for(let y=R.y;y<R.y+R.h;y+=6)for(let x=R.x;x<R.x+R.w;x+=6){c.fillStyle=R.floor[((x-R.x+y-R.y)/6)%2];c.fillRect(x,y,Math.min(6,R.x+R.w-x),Math.min(6,R.y+R.h-y));}
+    c.fillStyle='#46545a';
+    c.fillRect(R.x-2,R.y-2,R.w+4,2);c.fillRect(R.x-2,R.y,2,R.h+2);c.fillRect(R.x+R.w,R.y,2,R.h+2);
+    const wy=R.top?R.y+R.h:R.y-2;c.fillRect(R.x-2,R.top?wy:R.y+R.h,R.w+4,2);
+    c.fillStyle=R.floor[0];c.fillRect(R.dx-7,wy,14,2);
+  });
+  const desk=(x,y,w,h)=>{c.fillStyle='#8a6a4a';c.fillRect(x,y,w,h);c.fillStyle='#a7825c';c.fillRect(x,y,w,2);};
+  const bed=(x,y)=>{c.fillStyle='#9aa7ad';c.fillRect(x-10,y-4,20,9);c.fillStyle='#ffffff';c.fillRect(x-10,y-5,20,7);c.fillStyle='#bfe0f0';c.fillRect(x-9,y-4,5,5);};
+  desk(10,22,22,8);c.fillStyle='#26323a';c.fillRect(14,15,8,6);c.fillStyle='#6fb7d8';c.fillRect(15,16,6,4);
+  c.fillStyle='#5b7fa3';c.fillRect(51,34,8,5);bed(20,50);c.fillStyle='#7a5a3a';c.fillRect(62,6,10,16);
+  if(o.xray){c.fillStyle='#8c969d';c.fillRect(98,10,14,16);c.fillStyle='#b8c1c7';c.fillRect(96,8,18,4);c.fillStyle='#5e6870';c.fillRect(116,14,4,22);}
+  else{c.fillStyle='#a69580';c.fillRect(90,20,10,8);c.fillRect(104,24,8,6);}
+  bed(168,24);
+  if(o.carm){c.fillStyle='#9aa3aa';c.fillRect(152,10,4,24);c.fillRect(152,10,30,4);c.fillRect(178,10,4,8);c.fillStyle='#5e6870';c.fillRect(146,30,8,10);}
+  if(o.rf){c.fillStyle='#3d4a55';c.fillRect(182,34,8,10);c.fillStyle='#57c7e6';c.fillRect(183,35,6,4);}
+  c.fillStyle='#26323a';c.fillRect(136,8,10,7);c.fillStyle='#7ee0a8';c.fillRect(137,9,8,5);
+  PT_BEDS.forEach(s=>bed(s.x,s.y-4));
+  for(let i=0;i<(o.eswt||0);i++){c.fillStyle='#7d8a93';c.fillRect(302-i*14,40,8,10);c.fillStyle='#ffd166';c.fillRect(303-i*14,41,6,3);}
+  if(o.manualRoom)MAN_BEDS.forEach(s=>bed(s.x,s.y-4));
+  else{c.fillStyle='#a69580';[[252,104],[268,112],[290,100],[300,124]].forEach(([x,y])=>c.fillRect(x,y,12,10));}
+  desk(12,103,46,7);desk(66,103,24,7);
+  CHAIRS.forEach(s=>{c.fillStyle='#4f7398';c.fillRect(s.x-4,s.y-4,8,5);c.fillStyle='#6a8db3';c.fillRect(s.x-4,s.y-6,8,2);});
+  [[226,96],[4,92]].forEach(([x,y])=>{c.fillStyle='#8a5a3a';c.fillRect(x+1,y+6,6,5);c.fillStyle='#3f8f4f';c.fillRect(x,y,8,7);c.fillStyle='#5cb85c';c.fillRect(x+2,y+1,4,3);});
+  c.fillStyle='#5a4a3a';c.fillRect(2,141,16,9);c.fillStyle='#46545a';c.fillRect(0,88,2,62);
+  scene.bg=b;
+}
+function drawPerson(c,sp){const L=sp.look;const x=Math.round(sp.x)-4,y=Math.round(sp.y)-13;
+  const st=sp.moving?Math.floor(scene.t*8)%2:0;
+  c.fillStyle='rgba(0,0,0,.2)';c.fillRect(x+1,y+12,6,2);
+  c.fillStyle=L.pants;c.fillRect(x+2,y+9,2,st?3:4);c.fillRect(x+4,y+9,2,st?4:3);
+  c.fillStyle=L.shirt;c.fillRect(x+1,y+4,6,6);
+  if(L.coat){c.fillStyle='#d5dbde';c.fillRect(x+4,y+4,1,6);c.fillStyle='#38444a';c.fillRect(x+2,y+5,1,3);}
+  c.fillStyle=L.skin;c.fillRect(x,y+5,1,3);c.fillRect(x+7,y+5,1,3);c.fillRect(x+2,y,4,4);
+  c.fillStyle=L.hair;c.fillRect(x+2,y,4,1);c.fillRect(x+1,y,1,L.long?5:2);c.fillRect(x+6,y,1,L.long?5:2);
+  if(L.cap){c.fillStyle=L.cap;c.fillRect(x+2,y-1,4,1);}
+  c.fillStyle='#1d1d1d';const ex=sp.face<0?0:1;c.fillRect(x+2+ex,y+2,1,1);c.fillRect(x+4+ex,y+2,1,1);
+  if(sp.mark){const b=Math.round(Math.sin(scene.t*6)*1.5);c.fillStyle='#0fb5a5';c.fillRect(x+1,y-6+b,6,1);c.fillRect(x+2,y-5+b,4,1);c.fillRect(x+3,y-4+b,2,1);}
+  if(sp.sad){c.fillStyle='#e0412f';c.fillRect(x+4,y-7,1,3);c.fillRect(x+4,y-3,1,1);}
+}
+function drawScene(){const c=scene.ctx;if(!scene.bg)drawBg();c.drawImage(scene.bg,0,0);
+  [scene.doc,...scene.staff,...scene.ps.values()].filter(Boolean).sort((a,b)=>a.y-b.y).forEach(sp=>drawPerson(c,sp));}
+function sceneLoop(ts){const dt=Math.min(.05,(ts-(scene.last||ts))/1000);scene.last=ts;scene.t+=dt;
+  if(state&&state.today){[scene.doc,...scene.staff,...scene.ps.values()].forEach(sp=>sp&&stepSprite(sp,dt));
+    scene.ps.forEach((sp,id)=>{if(sp.gone)scene.ps.delete(id);});drawScene();}
+  requestAnimationFrame(sceneLoop);}
+function sceneSync(){
+  const T=state&&state.today;if(!scene.cv||!T)return;
+  if(scene.owner!==state){scene.owner=state;scene.day=null;scene.sig='';}
+  if(scene.day!==state.day){scene.ps.clear();scene.slots.fill(null);scene.day=state.day;}
+  const sig=JSON.stringify([state.staff,state.owned]);
+  if(sig!==scene.sig){scene.sig=sig;buildStaff();scene.bg=null;scene.el.querySelector('.scene-labels').innerHTML=sceneLabels();}
+  const live=new Set();
+  T.queue.forEach(p=>{live.add(p.id);let sp=scene.ps.get(p.id);
+    if(!sp){sp=mkSprite(SPOT.door,patientLook(p));sp.id=p.id;scene.ps.set(p.id,sp);
+      sp.plan.push({spot:SPOT.recept,wait:.6});if(p.xray)sp.plan.push({spot:SPOT.xray,wait:1.2});}
+    const want=(p.id===T.sel&&!T.result)?'exam':'wait';
+    if(sp.want!==want){sp.want=want;
+      if(want==='exam'){freeSlot(sp);sp.plan.push({spot:SPOT.examChair});}
+      else sp.plan.push({spot:CHAIRS[takeSlot(sp)]});}
+    sp.mark=want==='exam';});
+  const R=T.result;
+  if(R&&R.pid&&scene.ps.has(R.pid)){live.add(R.pid);const sp=scene.ps.get(R.pid);
+    if(!sp.done){sp.done=true;sp.mark=false;freeSlot(sp);sp.plan=sp.plan.filter(x=>x.spot!==SPOT.examChair&&!CHAIRS.includes(x.spot));
+      treatPlan(R.tids||[]).forEach(s=>sp.plan.push(s));sp.plan.push({spot:SPOT.door,exit:true});
+      if((R.tids||[]).some(k=>TX[k].proc)&&scene.doc)scene.doc.plan.push({spot:SPOT.docProc,wait:2.4},{spot:SPOT.doc});}}
+  (T.assocLog||[]).forEach(a=>{if(a.seen)return;a.seen=true;let sp=scene.ps.get(a.pid);
+    if(!sp){sp=mkSprite(SPOT.door,patientLook(a));sp.id=a.pid;scene.ps.set(a.pid,sp);sp.plan.push({spot:SPOT.recept,wait:.4});}
+    live.add(a.pid);
+    if(!sp.done){sp.done=true;sp.mark=false;freeSlot(sp);sp.plan=sp.plan.filter(x=>!CHAIRS.includes(x.spot)&&x.spot!==SPOT.examChair);
+      sp.plan.push({spot:SPOT.examChair2,wait:1.2});treatPlan(a.tids).forEach(s=>sp.plan.push(s));sp.plan.push({spot:SPOT.door,exit:true});}});
+  scene.ps.forEach((sp,id)=>{if(!live.has(id)&&!sp.done){sp.done=true;sp.mark=false;sp.sad=true;freeSlot(sp);sp.plan=[{spot:SPOT.door,exit:true}];sp.path=[];sp.wait=0;}});
+}
+function mountScene(){
+  if(!scene.el){const el=document.createElement('section');el.className='scene';
+    el.innerHTML=`<div class="scene-wrap"><canvas width="${SW}" height="${SH}" role="img" aria-label="병원 내부 모습"></canvas><div class="scene-labels"></div></div>`;
+    scene.el=el;scene.cv=el.querySelector('canvas');scene.ctx=scene.cv.getContext('2d');scene.ctx.imageSmoothingEnabled=false;requestAnimationFrame(sceneLoop);}
+  const st=app.querySelector('.stats');if(st&&st.nextSibling!==scene.el)st.after(scene.el);
+  sceneSync();
+}
+
+/* ---------- boot ---------- */
+function boot(data){
+  state=(data&&data.state)||load();
+  if(!state){newGame('김원장 통증의학과');state.modal={type:'intro'};}
+  if(!Array.isArray(state.returning))state.returning=[];
+  STAFF.forEach(x=>{if(typeof state.staff[x.k]!=='number')state.staff[x.k]=0;});
+  const fixDx=p=>{if(p&&p.dx==='mps')p.dx='discNeck';};
+  state.returning.forEach(r=>fixDx(r.base));
+  if(state.today){state.today.queue.forEach(fixDx);state.today.arrivals.forEach(fixDx);}
+  if(state.today){state.today.grading=null;state.today.aiError='';
+    if(state.today.result&&!state.today.result.tids){state.today.result=null;if(state.today.queue.length)state.today.sel=state.today.queue[0].id;}}
+  render();
+}
+try{window.claude?.hot?.snapshot?.(()=>({state}));}catch(e){}
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+
+</body>
+</html>
