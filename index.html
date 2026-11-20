@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-19T07:51:36.588Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-20T07:27:04.647Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -446,12 +446,13 @@ const STAFF=[
  {k:'counselor',name:'상담실장',wage:160000,max:1,min:0,desc:'비급여 설명 담당. 실손 없는 환자의 불만이 줄고 비급여 만족도가 올라요. (월 약 400만원)'},
  {k:'nurse',name:'간호사',wage:152000,max:3,min:1,desc:'시술 보조. 1명 늘 때마다 주사·시술 시간 -2분. (월 약 380만원)'},
  {k:'pt',name:'물리치료사',wage:140000,max:5,min:0,desc:`물리치료·도수치료·체외충격파 담당. 1명당 하루 ${UNIT_PER_PT}단위 (물리치료·체외충격파 1, 도수 2). (월 약 350만원)`},
- {k:'assoc',name:'부원장',wage:800000,max:4,min:0,desc:'대기 환자를 따로 진료해요. 실력은 원장님의 85% 정도, 레드 플래그는 80%만 잡아요. 1명 이상 있으면 자동 운영을 켤 수 있어요. (월 약 2,000만원)'},
+ {k:'assoc',name:'부원장',wage:800000,max:4,min:0,desc:'대기 환자를 따로 진료해요. 1명마다 하루 환자 상한 +20명, 찾아오는 환자 +7명. 실력은 원장님의 85% 정도, 레드 플래그는 80%만 잡아요. 1명 이상 있으면 자동 운영을 켤 수 있어요. (월 약 2,000만원)'},
  {k:'radio',name:'방사선사',wage:152000,max:2,min:0,desc:'X-ray 촬영과 C-arm 시술에 꼭 필요해요. (월 약 380만원)'}
 ];
 const OPEX=120000; /* 전기·소모품·EMR·세무·장비 유지보수: 월 약 300만원 */
 const GROW={
  youtube:{name:'개원일기 쇼츠 채널',costs:[3e6,8e6,15e6],desc:'원장님이 직접 찍는 개원일기. 단계마다 하루 환자 +2.'},
+ ads:{name:'온라인 광고 (지도·블로그)',costs:[5e6,12e6,25e6],desc:'지도 앱 상위 노출과 블로그 체험단. 단계마다 하루 환자 +3.'},
  seminar:{name:'통증학회 연수',costs:[3e6,7e6,12e6],desc:'단계마다 시술 시간 -2분, 치료 효과 상승.'}
 };
 const RENT=260000; /* 임대료+관리비 월 약 650만원 */
@@ -521,7 +522,7 @@ const diffOf=()=>DIFFS[state.diff]||DIFFS.normal;
 const dailyInterest=()=>Math.round(state.loan*diffOf().rate/365);
 function fresh(name,diff){const D=DIFFS[diff]||DIFFS.normal;return{v:2,diff:DIFFS[diff]?diff:'normal',clinic:name||'김원장 통증의학과',day:1,money:D.money,loan:D.loan,
   auto:!!D.auto,autoSpeed:1,autoPaused:false,autoLog:[],rating:D.rating||3.5,fatigue:100,level:1,xp:0,
-  totalTreated:0,overtreat:0,owned:{...D.owned},staff:{assoc:0,...D.staff},youtube:0,seminar:0,pharmacy:false,rentDiscount:0,
+  totalTreated:0,overtreat:0,owned:{...D.owned},staff:{assoc:0,...D.staff},youtube:0,ads:0,seminar:0,pharmacy:false,rentDiscount:0,
   mods:[],returning:[],evtUsed:{},titleIdx:0,loanDone:D.loan<=0,log:[],today:null,modal:null,shopTab:'equip',flagCatch:0,flagMiss:0,uid:1};}
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&s.v===2?s:null;}catch(e){return null;}}
@@ -543,10 +544,13 @@ function startDay(){
 }
 function patientCount(T){
   const modSum=state.mods.reduce((a,m)=>a+m.val,0);
-  let n=10+(state.rating-3.5)*12+state.youtube*2+(state.owned.sign?1:0)+Math.min(Math.floor(state.day/4),6)+modSum+T.extra;
+  const assoc=state.staff.assoc||0;
+  let n=10+(state.rating-3.5)*12+state.youtube*2+(state.ads||0)*3+(state.owned.sign?1:0)+Math.min(Math.floor(state.day/4),10)+assoc*7+modSum+T.extra;
   if(T.close-T.open<=300)n*=.55;
-  return clamp(Math.round(n),4,40);
+  return clamp(Math.round(n),4,maxPatients());
 }
+/* 하루 환자 상한: 원장 혼자 40명, 부원장 1명마다 +20명 */
+const maxPatients=()=>40+20*(state.staff.assoc||0);
 function genPatient(time,T){
   const ws=DX.map(d=>d.w*((T.boost&&T.boost[d.id])||1));let r=Math.random()*ws.reduce((a,b)=>a+b,0),d=DX[0];
   for(let i=0;i<DX.length;i++){r-=ws[i];if(r<=0){d=DX[i];break;}}
@@ -1541,6 +1545,7 @@ function boot(data){
   if(!state){newGame('김원장 통증의학과');state.modal={type:'intro'};}
   if(!Array.isArray(state.returning))state.returning=[];
   STAFF.forEach(x=>{if(typeof state.staff[x.k]!=='number')state.staff[x.k]=0;});
+  Object.keys(GROW).forEach(k=>{if(typeof state[k]!=='number')state[k]=0;});
   const fixDx=p=>{if(p&&p.dx==='mps')p.dx='discNeck';};
   state.returning.forEach(r=>fixDx(r.base));
   if(state.today){state.today.queue.forEach(fixDx);state.today.arrivals.forEach(fixDx);}
