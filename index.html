@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-20T07:56:19.377Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-20T12:16:51.836Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -249,6 +249,21 @@ table.ledger tr.total td{font-weight:700;border-bottom:0;padding-top:8px}
 .g{font-size:11.5px;border-radius:8px;padding:0 6px;border:1px solid}
 .g-c{color:#8a5a32;border-color:#8a5a32}.g-r{color:var(--muted);border-color:var(--muted)}.g-m{color:var(--amber);border-color:var(--amber)}
 .up{color:var(--good)}
+.spark{width:100%;height:30px;display:block}
+.newslist{display:flex;flex-direction:column;gap:8px}
+.news{border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:10px 12px;background:var(--paper);display:flex;flex-direction:column;gap:4px}
+.news.done{border-left-color:var(--muted);opacity:.92}
+.news h4{margin:0;font-size:14.5px}
+.news p{margin:0;font-size:12.5px;color:var(--muted)}
+.news .nres{color:var(--ink)}
+.news .nres.pend{color:var(--teal)}
+.nh{display:flex;gap:6px;align-items:center;font-size:11.5px}
+.nsrc{border:1px solid var(--teal);color:var(--teal);border-radius:8px;padding:0 6px}
+.nsrc.rumor{border-color:var(--amber);color:var(--amber)}
+.nst{color:var(--muted)}
+.bld-card{margin-bottom:10px}
+.offer{font-size:12.5px;border-top:1px dashed var(--line);padding-top:6px;display:flex;flex-direction:column;gap:4px}
+.offer small{color:var(--muted)}
 .diffs{display:flex;flex-direction:column;gap:8px}
 .diff{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:var(--paper);cursor:pointer}
 .diff:hover{border-color:var(--teal)}
@@ -493,9 +508,9 @@ const EVENTS=[
   opts:[{label:'진료기록 제출',fx:s=>{if(s.overtreat>=3){const fine=s.overtreat*2e6;s.money-=fine;s.rating=clamp(s.rating-.1,1,5);s._res=`과잉진료 ${s.overtreat}건 적발. 환수금 ${won(fine)}을 냈고 평점이 떨어졌어요.`;}else{s.rating=clamp(s.rating+.03,1,5);s._res='깔끔한 진료기록으로 무사 통과! 평점이 조금 올랐어요.';}s.overtreat=0;},res:s=>s._res}]},
  {id:'leave',cond:()=>true,title:'간호 선생님 연차',text:'간호조무사 한 분이 오늘 연차예요. 접수가 느려져서 환자들이 덜 기다려줄 거예요.',
   opts:[{label:'오늘은 내가 더 뛴다',fx:(s,T)=>{T.patienceMod-=15;},res:'오늘은 환자 인내심이 15분 줄어요.'}]},
- {id:'vip',once:true,cond:s=>s.day>3,title:'건물주 어르신 내원 예정',text:'건물주 최회장님이 무릎이 아프시대요. 오전 10시에 오신답니다. 별 다섯 개 받으면 임대료를 깎아주실지도?',
+ {id:'vip',once:true,cond:s=>s.day>3&&!(s.bld&&(s.bld.floor||s.bld.own)),title:'건물주 어르신 내원 예정',text:'건물주 최회장님이 무릎이 아프시대요. 오전 10시에 오신답니다. 별 다섯 개 받으면 임대료를 깎아주실지도?',
   opts:[{label:'정성껏 모시겠습니다',fx:(s,T)=>{T.vip=true;},res:'10시에 VIP 환자가 와요.'}]},
- {id:'pharmacy',once:true,cond:s=>s.day>2,title:'1층에 약국 오픈',text:'건물 1층에 약국이 새로 문을 열었어요. 처방전 들고 바로 내려가면 되니 환자들이 편해해요.',
+ {id:'pharmacy',once:true,cond:s=>s.day>2&&!(s.bld&&s.bld.own),title:'1층에 약국 오픈',text:'건물 1층에 약국이 새로 문을 열었어요. 처방전 들고 바로 내려가면 되니 환자들이 편해해요.',
   opts:[{label:'개업 축하 화분 보내기',fx:s=>{s.pharmacy=true;},res:'이제 약 처방 만족도가 올라가요.'}]},
  {id:'holiday',cond:s=>dowOf(s.day)===4,title:'명절 연휴 전날',text:'연휴 전에 치료받으려는 환자들로 아침부터 붐벼요.',
   opts:[{label:'오늘 각오하자',fx:(s,T)=>{T.extra+=6;},res:'오늘은 환자가 6명 더 와요.'}]},
@@ -506,8 +521,33 @@ const EVENTS=[
   opts:[{label:'출연한다',fx:()=>addMod(3,7,'방송 출연'),res:'일주일 동안 하루 환자가 3명 늘어요.'},{label:'진료에 집중하겠습니다',fx:()=>{},res:'겸손한 원장님!'}]},
  {id:'lecture',cond:s=>s.day>8&&dowOf(s.day)<5,title:'학회 증례 발표 초청',text:'통증학회에서 증례 발표를 해달래요. 오전 진료를 비워야 해요.',
   opts:[{label:'발표하고 온다 (경험치 +80, 오후 진료만)',fx:(s,T)=>{gainXp(80);T.open=840;T.time=840;T.lunchDone=true;},res:'오후 2시부터 진료를 시작해요.'},
-        {label:'환자가 먼저죠',fx:()=>{},res:'정상 진료합니다.'}]}
+        {label:'환자가 먼저죠',fx:()=>{},res:'정상 진료합니다.'}]},
+ /* ---- 건물 이벤트 ---- */
+ {id:'bargain',cond:s=>s.day>20&&s.bld&&!s.bld.own&&s.money>=bldPrice(.8)*(1-MORT_LTV),title:'건물 급매 소식',
+  text:s=>`${BLD_NAME} 건물주가 사업 자금이 급해 건물을 내놓았대요. 오늘만 시세(${won(bldPrice())})의 80%인 <b>${won(bldPrice(.8))}</b>에 판대요. 계약금 ${Math.round((1-MORT_LTV)*100)}%만 있으면 나머지는 담보대출(연 ${MORT_RATE*100}%)로 돼요.`,
+  opts:[{label:'지금은 무리하지 않는다',fx:()=>{},res:'다음 기회를 노려봐요.'},
+        {label:s=>`대출 끼고 매입 (계약금 ${won(Math.round(bldPrice(.8)*(1-MORT_LTV)))})`,fx:s=>{buyBuilding(.8,true);},res:'건물주가 됐어요! 재테크 → 건물에서 세입자를 들여보세요.'}]},
+ {id:'subway',once:true,cond:s=>s.bld&&s.bld.own&&s.day-s.bld.ownDay>10,title:'지하철역 신설 확정!',text:'건물 바로 앞에 새 지하철역이 생긴대요. 유동 인구가 늘고 건물 값이 뛰어요.',
+  opts:[{label:'역세권 건물주라니!',fx:s=>{s.bld.value=Math.round(s.bld.value*1.25);addMod(3,14,'역세권');},res:'건물 시세 +25%, 2주 동안 하루 환자 +3명.'}]},
+ {id:'devzone',once:true,cond:s=>s.bld&&s.day>30,title:s=>s.bld.own?'건너편 대단지 아파트 입주':'건너편 대단지 아파트 입주 (건물 시세 상승)',text:'3,000세대 아파트 입주가 시작됐어요. 동네가 젊어지고 상가 시세도 들썩여요.',
+  opts:[{label:'신환이 늘겠네요',fx:s=>{s.bld.value=Math.round(s.bld.value*1.1);addMod(2,10,'대단지 입주');},res:'건물 시세 +10%, 10일 동안 하루 환자 +2명.'}]},
+ {id:'buyer',cond:s=>s.bld&&s.bld.own&&s.day-s.bld.ownDay>14,title:'건물을 사겠다는 사람이 나타났어요',text:s=>`한 투자자가 ${BLD_NAME}을 시세의 115%인 <b>${won(s.bld.value*1.15)}</b>에 사고 싶대요. 대출 ${won(s.bld.mort)}을 갚고 남는 돈을 받아요. 팔면 다시 3층 세입자로 돌아가요.`,
+  opts:[{label:'계속 보유한다',fx:()=>{},res:'건물은 길게 보는 거죠.'},
+        {label:'판다',fx:s=>{const B=s.bld,got=Math.round(B.value*1.15)-B.mort;s.money+=got;if(hasTen('pharm')&&!s.evtUsed.pharmacy)s.pharmacy=false;B.own=false;B.floor=false;B.ten={};B.offers={};B.mort=0;s._res=`건물을 팔아 ${won(got)}을 손에 쥐었어요!`;},res:s=>s._res}]},
+ {id:'arrears',cond:s=>tenantsOf().some(t=>t.cred<=2),title:'세입자 임대료 연체',
+  text:s=>{const f=arrFloor(s),t=s.bld.ten[f];return`${f}층 ${TENANTS[t.k].name}이(가) 이번 달 임대료를 못 냈어요. 사정이 어렵대요.`;},
+  opts:[{label:'한 번 기다려준다 (일주일치 임대료 손실)',fx:s=>{const t=s.bld.ten[arrFloor(s)];s.money-=t.rent*7;t.cred=Math.min(3,t.cred+1);s.rating=clamp(s.rating+.02,1,5);},res:'인심 좋은 건물주라는 소문이 났어요. 세입자 신용도 회복됐어요.'},
+        {label:'내보낸다',fx:s=>{const f=arrFloor(s),t=s.bld.ten[f];s.bld.ten[f]=null;s.bld.offers[f]=rollOffers(f);if(t.k==='pharm'&&!s.evtUsed.pharmacy)s.pharmacy=false;},res:'공실이 생겼어요. 재테크 → 건물에서 새 세입자를 고르세요.'}]},
+ {id:'elevator',cond:s=>s.bld&&s.bld.own,title:'엘리베이터 고장',text:'건물 엘리베이터가 멈췄어요. 무릎·허리 아픈 환자들이 계단으로 올라와야 해요.',
+  opts:[{label:'바로 수리한다 (-3,000만원)',cost:3e7,fx:()=>{},res:'오전 중에 고쳤어요.'},
+        {label:'다음 주로 미룬다',fx:(s,T)=>{T.patienceMod-=20;addMod(-2,4,'엘리베이터 고장');},res:'환자들이 힘들어해요. 며칠 동안 환자가 줄어요.'}]},
+ {id:'leaveten',cond:s=>tenantsOf().length>=2,title:'세입자 계약 만료',
+  text:s=>{const f=leaveFloor(s);return`${f}층 ${TENANTS[s.bld.ten[f].k].name}이(가) 계약이 끝나면 나가겠대요. 임대료를 깎아주면 남겠대요.`;},
+  opts:[{label:'임대료 15% 깎아서 붙잡는다',fx:s=>{const t=s.bld.ten[leaveFloor(s)];t.rent=Math.round(t.rent*.85/1e4)*1e4;},res:'세입자가 남기로 했어요.'},
+        {label:'보내주고 새 세입자를 찾는다',fx:s=>{const f=leaveFloor(s),t=s.bld.ten[f];s.bld.ten[f]=null;s.bld.offers[f]=rollOffers(f);if(t.k==='pharm'&&!s.evtUsed.pharmacy)s.pharmacy=false;},res:'공실이 생겼어요. 재테크 → 건물에서 새 세입자를 고르세요.'}]}
 ];
+function arrFloor(s){let best=null;FLOORS.forEach(f=>{const t=s.bld.ten[f];if(t&&(!best||t.cred<s.bld.ten[best].cred))best=f;});return best;}
+function leaveFloor(s){const fs=FLOORS.filter(f=>s.bld.ten[f]);return fs[(s.day*7)%fs.length];}
 
 /* ---------- state ---------- */
 let state=null;
@@ -556,7 +596,7 @@ function startDay(){
 function patientCount(T){
   const modSum=state.mods.reduce((a,m)=>a+m.val,0);
   const assoc=state.staff.assoc||0;
-  let n=10+(state.rating-3.5)*12+state.youtube*2+(state.ads||0)*3+(state.owned.sign?1:0)+Math.min(Math.floor(state.day/4),10)+assoc*7+modSum+T.extra;
+  let n=10+(state.rating-3.5)*12+state.youtube*2+(state.ads||0)*3+(state.owned.sign?1:0)+Math.min(Math.floor(state.day/4),10)+assoc*7+modSum+T.extra+tenantPatients();
   if(T.close-T.open<=300)n*=.55;
   return clamp(Math.round(n),4,maxPatients());
 }
@@ -613,7 +653,7 @@ const SX_MORE={
  cts:['Tinel 징후 양성','엄지두덩 위축 없음'],
  occipital:['목을 돌리면 악화','긴장성 두통 동반']
 };
-function patienceRoll(T){return Math.max(25,RI(50,100)+(state.staff.reception-1)*12+diffOf().patience+(state.owned.remodel?15:0)+T.patienceMod);}
+function patienceRoll(T){return Math.max(25,RI(50,100)+(state.staff.reception-1)*12+diffOf().patience+(state.owned.remodel?15:0)+(hasTen('cafe')?10:0)+T.patienceMod);}
 /* A returning patient: same person, new visit, symptoms follow how the last treatment went. */
 function makeReturn(r,T){
   const h=r.history[r.history.length-1];const rel=h.before?(h.before-h.after)/h.before:0;let vas,cc;
@@ -867,23 +907,31 @@ function endDay(){
   const T=state.today;if(T.ended)return;T.ended=true;
   if(T.queue.length){T.lost+=T.queue.length;state.rating=clamp(state.rating-.006*T.queue.length,1,5);log(`<span class="bad">마감으로 ${T.queue.length}명이 돌아가셨어요</span>`);}
   T.queue=[];T.sel=null;T.result=null;
-  const rent=Math.max(0,RENT-state.rentDiscount);
+  const rent=clinicRent();
   const wages=STAFF.reduce((a,s)=>a+s.wage*state.staff[s.k],0);
   const interest=dailyInterest();
   const material=Math.round(T.revenue*.08);
   const opex=OPEX;
-  const cost=rent+wages+interest+material+opex;
-  state.money-=cost;
+  const bInc=tenantRent(),mInt=mortInterest();
+  const cost=rent+wages+interest+material+opex+mInt;
+  state.money+=bInc-cost;
+  if(hasTen('rad'))state.rating=clamp(state.rating+.002,1,5);
   state.mods.forEach(m=>m.days--);state.mods=state.mods.filter(m=>m.days>0);
   const ti=titleIdx();const newTitle=ti>state.titleIdx?TITLES[ti][2]:null;if(ti>state.titleIdx)state.titleIdx=ti;
-  T.summary={rent,wages,interest,material,opex,cost,net:T.revenue-cost,newTitle};
-  log(`<b>${state.day}일차 마감</b> · 순이익 <span class="${T.revenue-cost>=0?'good':'bad'}">${won(T.revenue-cost)}</span>`);
+  const net=T.revenue+bInc-cost;
+  T.summary={rent,wages,interest,material,opex,bInc,mInt,cost,net,newTitle};
+  log(`<b>${state.day}일차 마감</b> · 순이익 <span class="${net>=0?'good':'bad'}">${won(net)}</span>`);
   state.modal={type:state.money<diffOf().limit?'gameover':'summary'};sfx('chime');
 }
 function nextDay(){
   state.day++;state.fatigue=Math.min(maxFat(),state.fatigue+40);
   ensureOffice();marketTick();state.fatigue=Math.min(maxFat(),state.fatigue+comfort()*2);if(state.office.furn.shelf)gainXp(3);
   if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진. 체력을 모두 회복했어요.');}
+  bldTick();const mk=stockTick();
+  mk.hit.forEach(n=>{const st=SMAP[n.sid],h=state.inv.hold[n.sid];toast(`${n.move>=0?'📈':'📉'} ${st.name} ${n.move>=0?'급등':'급락'} ${Math.round(n.move*100)}%${h?' (보유 중!)':''}`);
+    log(`<b>${st.name}</b> 뉴스 결과 ${n.move>=0?'급등':'급락'} ${Math.round(n.move*100)}%`);});
+  if(mk.div)toast(`굳건메디리츠 배당금 +${won(mk.div)}`);
+  if(mk.fresh)toast(`📰 새 뉴스: ${SMAP[mk.fresh.sid].name} 관련 소식이 떴어요 (재테크)`);
   state.modal=null;startDay();
 }
 
@@ -901,6 +949,7 @@ function render(){
       <button class="btn ic" data-act="music" aria-pressed="${audioPref().music}" aria-label="배경음악 ${audioPref().music?'끄기':'켜기'}" title="배경음악">${audioPref().music?'🎵':'🔇'}</button>
       <button class="btn ic" data-act="sfxtoggle" aria-pressed="${audioPref().sfx}" aria-label="효과음 ${audioPref().sfx?'끄기':'켜기'}" title="효과음">${audioPref().sfx?'🔔':'🔕'}</button>
       <button class="btn" data-act="office">🖼 원장실</button>
+      <button class="btn" data-act="invest">📈 재테크</button>
       <button class="btn ${s.auto?'primary':''}" data-act="auto" aria-pressed="${!!s.auto}">${s.auto?'자동 운영 중':'자동 운영'}</button>
       ${Ads.on?'<button class="btn" data-act="rewards">🎁 보상</button>':''}
       <button class="btn" data-act="shop">투자·채용</button>
@@ -1085,7 +1134,7 @@ function renderModal(){
   }else if(m.type==='event'){
     const e=EVENTS.find(x=>x.id===m.id);
     h=modal(`<p class="lead">개원 ${state.day}일차 · 아침</p><h2>${val(e.title)}</h2><p>${val(e.text)}</p>
-      <div class="opts">${e.opts.map((o,i)=>`<button class="btn" data-act="evt" data-arg="${i}">${o.label}</button>`).join('')}</div>`);
+      <div class="opts">${e.opts.map((o,i)=>`<button class="btn" data-act="evt" data-arg="${i}">${val(o.label)}</button>`).join('')}</div>`);
   }else if(m.type==='summary'||m.type==='gameover'){
     const T=state.today,S=T.summary;const avg=T.stars.length?(T.stars.reduce((a,b)=>a+b,0)/T.stars.length).toFixed(1):'-';
     const dr=state.rating-T.startRating;
@@ -1102,11 +1151,13 @@ function renderModal(){
       </div>
       <table class="ledger"><tbody>
         <tr><td>진료 매출</td><td>${won(T.revenue)}</td></tr>
-        <tr><td>임대료${state.rentDiscount?' (건물주 할인 적용)':''}</td><td>-${won(S.rent)}</td></tr>
+        <tr><td>임대료${state.bld&&(state.bld.floor||state.bld.own)?' (내 소유)':state.rentDiscount?' (건물주 할인 적용)':''}</td><td>-${won(S.rent)}</td></tr>
         <tr><td>인건비</td><td>-${won(S.wages)}</td></tr>
         <tr><td>대출 이자 (연 ${Math.round(diffOf().rate*100)}%)</td><td>-${won(S.interest)}</td></tr>
         <tr><td>운영비 (전기·소모품·EMR·장비 유지보수)</td><td>-${won(S.opex||0)}</td></tr>
         <tr><td>재료비 (매출의 8%)</td><td>-${won(S.material)}</td></tr>
+        ${S.bInc?`<tr><td>건물 임대 수입</td><td class="up">+${won(S.bInc)}</td></tr>`:''}
+        ${S.mInt?`<tr><td>건물 담보대출 이자 (연 ${MORT_RATE*100}%)</td><td>-${won(S.mInt)}</td></tr>`:''}
         <tr class="total"><td>순이익</td><td class="${S.net<0?'neg':''}">${won(S.net)}</td></tr>
         <tr class="total"><td>운영 자금</td><td class="${state.money<0?'neg':''}">${won(state.money)}</td></tr>
       </tbody></table>
@@ -1121,9 +1172,11 @@ function renderModal(){
       <h3>진단과 치료</h3><ul><li><b>직접 입력 · AI 채점</b>: 진단과 치료 계획을 직접 적으면 Claude가 실제 임상 기준으로 채점해요. 점수가 치료 효과(VAS 감소)와 별점에 반영되고, 적은 치료에 맞춰 시간·진료비가 계산돼요. 채점 한 번마다 내 Claude 사용량이 조금 쓰여요.</li><li><b>빠른 선택</b>: 치료 버튼을 최대 3개 고른 뒤 '진료 완료'를 누르면 진료해요. 가장 잘 듣는 치료에 나머지 치료가 보조 효과를 더해요. 게임에 정해진 효과표로 계산해요.</li><li>별점은 통증이 줄어든 비율로 정해지고, 대기 시간·비급여 부담·과잉진료 등이 ±로 붙어요. 결과 화면에 계산 과정이 나와요.</li><li>환자의 호소와 진찰 소견으로 진단을 추정하세요. 진단은 객관식이에요. 보기 중 가장 의심되는 순서대로 최대 3개를 누르세요. 1순위가 맞으면 60점, 2순위 25점, 3순위 15점이고, 모범 순위 안에 있지만 순서가 다르면 절반을 받아요. 진단 점수가 높을수록 치료 효과도 조금 올라가요.</li><li>질환마다 잘 듣는 치료가 달라요. 결과 화면에서 모범 치료를 알려줘요.</li><li>효과 없는 비싼 비급여 치료는 과잉진료로 기록돼요. 쌓이면 심평원 조사에서 환수금을 내요.</li><li>실손보험이 없는 환자는 비싼 비급여 치료에 불만이 커요. 상담실장을 두면 줄어들어요.</li></ul>
       <h3>레드 플래그</h3><ul><li>배뇨 장애, 발열, 체중 감소, 암 병력, 외상 후 극심한 통증 같은 신호가 보이면 <b>상급병원 전원</b>이 정답이에요.</li><li>놓치면 합의금 500만원과 큰 평점 하락이 있어요. 잡아내면 큰 보너스!</li></ul>
       <h3>체력과 성장</h3><ul><li>시술할수록 원장 체력이 줄어요. 30 미만이면 치료 효과가 떨어져요. 점심·밤·일요일에 회복돼요.</li><li>경험치로 원장 레벨이 오르면 최대 체력과 실력이 늘어요.</li><li>물리치료사 1명은 하루 ${UNIT_PER_PT}단위를 맡아요 (물리치료·체외충격파 1, 도수 2). 도수치료실 1개는 하루 ${MANUAL_PER_ROOM}회, 체외충격파 1대는 하루 ${ESWT_PER_MACHINE}회까지예요. C-arm 시술과 X-ray는 방사선사가 있어야 해요.</li><li>돈을 모아 장비를 늘리고 직원을 뽑고, 개원 대출을 갚아보세요. 운영 자금이 ${won(diffOf().limit)} 아래로 떨어지면 폐업이에요 (지금 난이도: ${diffOf().name}).</li><li><b>자동 운영</b>: 부원장이 1명 이상이면 켤 수 있어요. 원장님은 진료하지 않고 시간이 저절로 흘러가요. 부원장들이 모든 환자를 보고, 하루가 끝나면 결산이 쌓이고 다음 날로 넘어가요. 일시정지와 1·3·8배속을 쓸 수 있어요. 금수저 모드는 처음부터 자동 운영으로 시작해요.</li><li>VAS 5 이상인 초진 환자는 접수 후 바로 아픈 부위 X-ray를 찍어요 (X-ray와 방사선사가 있을 때). 주사 없이 물리치료나 약만 원하는 환자는 '보존치료 희망'으로 표시되고 X-ray를 찍지 않아요. 이런 환자에게 주사·시술을 하면 만족도가 떨어져요.</li></ul>
+      <h3>재테크</h3><ul><li><b>주식·코인</b>: 아침마다 제약·의료기기 뉴스가 떠요. 발표 직후엔 주가가 일단 들썩이고, 2~4일 뒤 진짜 결과가 반영돼요. 임상시험 설계와 효과 크기를 의사의 눈으로 판단해서 사고팔아 보세요. 단톡방 루머는 근거가 없어요.</li><li><b>건물</b>: 우리 층(3층)을 사면 임대료가 사라져요. 건물을 통째로 사면 층마다 세입자를 골라 임대 수입을 받고, 정형외과·필라테스·영상의학과처럼 병원과 시너지 나는 세입자를 들일 수 있어요. 담보대출로 계약금 40%만 내고 살 수도 있어요.</li></ul>
       <p class="lead">매출에는 건강보험 공단 부담금이 포함된 게임용 금액이에요.</p></div>
       <div class="row"><button class="btn primary" data-act="close">알겠어요</button></div>`,true);
   }else if(m.type==='office'){ensureOffice();h=modal(renderOffice(),true);
+  }else if(m.type==='invest'){h=modal(renderInvest(),true);
   }else if(m.type==='rewards'){
     const u=adUses();
     h=modal(`<h2>🎁 광고 보고 보상 받기</h2><p class="lead">짧은 광고를 끝까지 보면 보상을 받아요. 횟수는 매일 다시 채워져요.</p>
@@ -1157,7 +1210,7 @@ function renderShop(){
     return`<div class="item"><h3>${i===2?'전액 상환':won(amt)+' 상환'}</h3><p>남은 대출 ${won(s.loan)} · 하루 이자 ${won(dailyInterest())}</p><span class="price">${won(amt)}</span>
      <button class="btn sm primary" data-act="repay" data-arg="${amt}" ${s.money<amt?'disabled':''}>상환</button></div>`;}).join('');
   const wages=STAFF.reduce((a,x)=>a+x.wage*s.staff[x.k],0);
-  return`<h2>투자·채용</h2><p class="lead">운영 자금 <b class="${s.money<0?'neg':''}">${won(s.money)}</b> · 하루 고정비 약 ${won(Math.max(0,RENT-s.rentDiscount)+wages+OPEX+dailyInterest())} (인건비 ${won(wages)})</p>
+  return`<h2>투자·채용</h2><p class="lead">운영 자금 <b class="${s.money<0?'neg':''}">${won(s.money)}</b> · 하루 고정비 약 ${won(clinicRent()+wages+OPEX+dailyInterest()+mortInterest())} (인건비 ${won(wages)})</p>
     <div class="tabs">${tabs}</div><div class="shop">${body}</div>
     <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`;
 }
@@ -1206,7 +1259,7 @@ function autoTick(){
   if(!state||!state.auto||state.autoPaused||pointerDown||Ads.busy)return;
   const T=state.today;if(!T)return;
   if(state.modal){if(state.modal.type!=='event')return;
-    const e=EVENTS.find(x=>x.id===state.modal.id);toast(`[아침 일정] ${val(e.title)} → ${e.opts[0].label}`);chooseEvent(0);save();render();return;}
+    const e=EVENTS.find(x=>x.id===state.modal.id);toast(`[아침 일정] ${val(e.title)} → ${val(e.opts[0].label)}`);chooseEvent(0);save();render();return;}
   if(T.ended){nextDay();save();render();return;}
   if(T.time>=T.close){
     endDay();const S=T.summary;
@@ -1251,6 +1304,20 @@ function act(a,arg){
     case'sfxtoggle':state.audio=state.audio||{music:true,sfx:true};state.audio.sfx=!state.audio.sfx;break;
     case'office':ensureOffice();openOverlay('office');break;
     case'otab':state.officeTab=arg;break;
+    case'invest':ensureInv();state.bldSellAsk=false;openOverlay('invest');break;
+    case'invtab':state.invTab=arg;state.bldSellAsk=false;break;
+    case'sbuy':{const[id,a]=arg.split(':');if(SMAP[id]&&state.money>=+a)buyStock(id,+a);break;}
+    case'ssell':{const[id,f]=arg.split(':');if(SMAP[id])sellStock(id,Math.min(1,+f));break;}
+    case'bfloor':{ensureInv();const B=state.bld,p=floorPrice();if(!B.floor&&!B.own&&state.money>=p){state.money-=p;B.floor=true;sfx('buy');toast('3층을 매입했어요. 이제 임대료가 없어요!');log(`<b>3층 매입</b> (-${won(p)})`);}break;}
+    case'bbuy':{ensureInv();if(buyBuilding(1,arg==='loan')){sfx('level');toast(`${BLD_NAME}의 건물주가 됐어요! 빈 층에 세입자를 들여보세요.`);}break;}
+    case'bten':{const B=state.bld,[f,i]=arg.split(':').map(Number),o=(B.offers[f]||[])[i];if(B.own&&o&&!B.ten[f]&&!hasTen(o.k)){B.ten[f]=o;delete B.offers[f];if(o.k==='pharm')state.pharmacy=true;sfx('buy');toast(`${f}층에 ${TENANTS[o.k].name} 입주!`);}break;}
+    case'bevict':{const B=state.bld,f=+arg,t=B.ten[f];if(t){B.ten[f]=null;B.offers[f]=rollOffers(f);if(t.k==='pharm'&&!state.evtUsed.pharmacy)state.pharmacy=false;toast(`${f}층 ${TENANTS[t.k].name}이(가) 나갔어요.`);}break;}
+    case'bmort':{const B=state.bld,amt=arg==='all'?B.mort:Math.min(+arg,B.mort);if(amt>0&&state.money>=amt){state.money-=amt;B.mort-=amt;toast(`담보대출 ${won(amt)} 상환`);}break;}
+    case'brefi':{const B=state.bld;if(B.own&&B.mort+1e8<=B.value*MORT_LTV){B.mort+=1e8;state.money+=1e8;toast('건물 담보로 1억을 더 빌렸어요.');}break;}
+    case'bsellask':state.bldSellAsk=true;break;
+    case'bsellno':state.bldSellAsk=false;break;
+    case'bsell':{const B=state.bld;if(B.own){const got=Math.round(B.value*.97)-B.mort;state.money+=got;log(`<b>${BLD_NAME}</b> 매각 (${won(got)})`);
+      if(hasTen('pharm')&&!state.evtUsed.pharmacy)state.pharmacy=false;B.own=false;B.floor=false;B.ten={};B.offers={};B.mort=0;state.bldSellAsk=false;sfx('coin');toast(`건물을 팔아 ${won(got)}을 손에 쥐었어요.`);}break;}
     case'fbuy':{const f=FURN.find(x=>x.k===arg);ensureOffice();if(f&&!state.office.furn[f.k]&&state.money>=f.cost){state.money-=f.cost;state.office.furn[f.k]=true;sfx('buy');toast(`${f.name}을(를) 원장실에 들였어요.`);}break;}
     case'abuy':{ensureOffice();const it=state.auction.items.find(x=>x.id===arg);if(it&&state.money>=it.price&&!ownsArt(arg)){state.money-=it.price;state.office.art.push({id:arg,paid:it.price});
       state.auction.items=state.auction.items.filter(x=>x.id!==arg);if(state.office.wall.length<3)state.office.wall.push(arg);sfx('buy');toast(`「${ARTMAP[arg].title}」 낙찰!`);}break;}
@@ -1622,6 +1689,165 @@ function marketTick(){ensureOffice();ART.forEach(a=>{const drift=a.g==='m'?.004:
   state.artMkt[a.id]=clamp((state.artMkt[a.id]||1)*Math.exp(g+drift),.5,3);});rollAuction();}
 const comfort=()=>state.office?FURN.reduce((s,f)=>s+(state.office.furn[f.k]?f.comfort:0),0):0;
 const lobbyArt=()=>state.office&&state.office.lobby?ARTMAP[state.office.lobby]:null;
+
+/* ---------- 재테크 ①: 주식·코인 (의학 뉴스를 의사의 눈으로 판단) ---------- */
+const STOCKS=[
+ {id:'hb',name:'한빛제약',sec:'제약',p0:52000,vol:.016,drift:.0005},
+ {id:'mb',name:'메디봇',sec:'의료기기',p0:31000,vol:.022,drift:.0007},
+ {id:'jb',name:'진바이오',sec:'바이오',p0:12000,vol:.035,drift:.0003},
+ {id:'gr',name:'굳건메디리츠',sec:'리츠 · 매주 월요일 배당',p0:5000,vol:.007,drift:.0002,div:.006},
+ {id:'cc',name:'코스모코인',sec:'코인',p0:2400000,vol:.065,drift:0}
+];
+const SMAP=Object.fromEntries(STOCKS.map(x=>[x.id,x]));
+const STOCK_FEE=.003;
+/* good: 1 호재 / 0 악재 / null 운 (루머). 발표 당일엔 일단 들썩이고, 2~4일 뒤 결과가 반영돼요. */
+const NEWS=[
+ {sid:'jb',good:1,src:'공시',t:'진바이오, 대상포진 후 신경통 신약 3상 결과 공시',b:'무작위 이중맹검 640명. 12주 NRS 감소 2.1점 (위약 0.9점), 이상반응으로 인한 중단율은 위약과 비슷.',why:'위약 대비 1.2점 차이에 대규모 이중맹검, 부작용도 적어서 허가 기대감이 커졌어요.'},
+ {sid:'mb',good:1,src:'언론',t:'메디봇 초음파 유도 주사 보조기, 신의료기술 인정',b:'보건복지부가 건강보험 행위 수가를 새로 만들었어요. 전국 통증·정형 의원 대상 영업 시작.',why:'수가가 생기면 병원들이 바로 살 이유가 생겨요. 실제 매출로 이어지는 소식이었어요.'},
+ {sid:'hb',good:1,src:'학회',t:'한빛제약 셀레콕시브 개량신약, 위장관 부작용 감소 확인',b:'고령 관절염 환자 1,100명 비교 연구에서 위장관 출혈·궤양 40% 감소. 약값은 기존과 같은 수준.',why:'고령 환자가 많은 실제 처방 현장에서 바로 쓰일 장점이라 처방이 빠르게 늘었어요.'},
+ {sid:'mb',good:1,src:'공시',t:'메디봇 척추 내시경 장비, 미국 FDA 허가',b:'510(k) 승인과 함께 미국 대형 척추센터 3곳과의 공급 계약도 공시.',why:'허가와 실제 공급 계약이 함께 나와서 기대가 아닌 매출이 확인됐어요.'},
+ {sid:'jb',good:1,src:'학회',t:'진바이오 무릎 골관절염 주사제 2b상 발표',b:'240명 무작위 대조. 24주 VAS 감소 2.4점 (위약 1.0점), MRI상 연골 두께 감소도 유의하게 늦춤.',why:'통증 차이가 의미 있는 크기(1.4점)이고 영상 지표까지 좋아서 3상 기대감이 커졌어요.'},
+ {sid:'hb',good:1,src:'공시',t:'한빛제약 서방형 프레가발린, 대형병원 처방목록 등재',b:'효과는 기존 약과 비슷하지만 하루 1번 복용으로 복약 순응도가 좋아졌어요. 상급종합병원 12곳 등재.',why:'획기적이진 않아도 실제 처방 통로가 열린 거라 매출이 꾸준히 늘었어요.'},
+ {sid:'jb',good:0,src:'언론',t:'진바이오 "꿈의 허리디스크 치료제" 3상 성공 발표',b:'회사 측 "통계적으로 유의한 획기적 결과". 12주 VAS 감소가 위약보다 0.3점 더 컸어요 (p=0.04).',why:'VAS 0.3점은 환자가 느끼는 최소 변화(약 1.5~2점)에 한참 못 미쳐요. 전문가 평가가 나오자 주가가 무너졌어요.'},
+ {sid:'mb',good:0,src:'언론',t:'메디봇 웨어러블 디스크 견인기 "효과 입증"',b:'사용자 만족도 94%! 다만 50명 설문 조사이고 대조군은 없었어요.',why:'대조군 없는 만족도 설문은 근거가 약해요. 결국 의료기기 허가가 반려됐어요.'},
+ {sid:'hb',good:0,src:'공시',t:'한빛제약 근이완제 신약 2상 "성공" 발표',b:'1차 평가변수는 위약과 차이가 없었고, 50대 남성 하위 그룹에서만 유의한 효과가 나왔어요.',why:'1차 평가변수 실패를 하위 분석으로 포장한 거였어요. 3상 진행이 불투명해졌어요.'},
+ {sid:'jb',good:0,src:'학회',t:'진바이오 줄기세포 주사, 회전근개 파열 "완치" 사례 공개',b:'학회 포스터 발표. 증례 3건의 MRI 사진만 있고 대조군·추적 기간 정보는 없어요.',why:'증례 3건으로는 아무것도 증명할 수 없어요. 임상시험 계획도 없다는 게 알려졌어요.'},
+ {sid:'hb',good:0,src:'공시',t:'한빛제약 신경병증 통증약 3상 효과 확인',b:'NRS 감소 위약 대비 1.3점. 다만 어지럼증 이상반응 31% (위약 6%), 중도 탈락 28%.',why:'효과는 있지만 어지럼증이 너무 많아 고령 환자에게 쓰기 어려워요. 허가 조건이 까다로워졌어요.'},
+ {sid:'mb',good:0,src:'언론',t:'메디봇 고주파 통증 치료기 국내 허가 획득',b:'식약처 허가 완료. 다만 신의료기술평가에서 "연구 단계 기술" 판정을 받았어요.',why:'허가가 나도 신의료기술평가를 통과하지 못하면 병원에서 제대로 쓸 수가 없어요.'},
+ {sid:'gr',good:1,src:'공시',t:'굳건메디리츠, 대학병원 앞 메디컬빌딩 매입',b:'공실률 0%, 10년 장기 임대 계약 승계. 배당 확대 예고.',why:'안정적인 장기 임대 수입이 늘어나 배당이 오른다는 기대가 반영됐어요.'},
+ {sid:'gr',good:0,src:'언론',t:'굳건메디리츠 "금리 올라도 문제없다"',b:'보유 빌딩 담보대출의 70%가 변동금리. 회사는 "영향이 제한적"이라는 입장.',why:'변동금리 대출 비중이 높으면 금리 인상이 그대로 이자 부담이 돼요.'},
+ {sid:'cc',good:null,src:'단톡방',t:'원장님 단톡방: "코스모코인 다음 주 대형 거래소 상장 확정이래요 ㅋㅋ"',b:'출처는 "아는 형님". 확인된 공시는 없어요.',why:'단톡방 루머는 근거가 없어요. 이번 결과는 순전히 운이었어요.'},
+ {sid:'cc',good:null,src:'단톡방',t:'원장님 단톡방: "코스모코인 재단 대표가 SNS에 로켓 🚀 올렸대요"',b:'그 밖의 정보는 없어요.',why:'이모지 하나로는 아무것도 알 수 없어요. 이번 결과는 순전히 운이었어요.'}
+];
+/* ---------- 재테크 ②: 건물 ---------- */
+const BLD_NAME='중앙메디컬타워';
+const FLOORS=[1,2,4,5]; /* 3층은 우리 의원 */
+const TENANTS={
+ pharm:{name:'약국',ic:'💊',fl:[1],rent:4e5,fx:'약 처방 만족도 상승'},
+ conv:{name:'편의점',ic:'🏪',fl:[1],rent:18e4,fx:'시너지 없음'},
+ cafe:{name:'카페',ic:'☕',fl:[1,2],rent:12e4,fx:'대기 환자 인내심 +10분'},
+ pilates:{name:'필라테스·PT',ic:'🏋️',fl:[2,4,5],rent:18e4,fx:'하루 환자 +2 (운동치료 연계)'},
+ ortho:{name:'정형외과',ic:'🦴',fl:[2,4,5],rent:28e4,fx:'하루 환자 +3 (시술 협진 의뢰)'},
+ rad:{name:'영상의학과 (MRI)',ic:'🩻',fl:[2,4,5],rent:3e5,fx:'매일 평점이 조금씩 올라요 (정밀 진단 연계)'},
+ kmed:{name:'한의원',ic:'🌿',fl:[2,4,5],rent:26e4,fx:'임대료는 높지만 하루 환자 -1 (환자 겹침)'},
+ office:{name:'일반 사무실',ic:'💼',fl:[2,4,5],rent:15e4,fx:'시너지 없음'}
+};
+const MORT_RATE=.04,MORT_LTV=.6;
+function ensureInv(){
+  if(!state.inv){const px={},hist={};STOCKS.forEach(x=>{px[x.id]=x.p0;hist[x.id]=[x.p0];});state.inv={px,hist,hold:{},news:[],used:[],realized:0};}
+  if(!state.bld)state.bld={value:25e8,floor:false,own:false,ten:{},offers:{},offerDay:0,mort:0,ownDay:0};
+}
+const tenantsOf=()=>state.bld&&state.bld.own?Object.values(state.bld.ten).filter(Boolean):[];
+const hasTen=k=>tenantsOf().some(t=>t.k===k);
+function tenantPatients(){let n=0;tenantsOf().forEach(t=>{if(t.k==='pilates')n+=2;if(t.k==='ortho')n+=3;if(t.k==='kmed')n-=1;});return n;}
+const tenantRent=()=>tenantsOf().reduce((a,t)=>a+t.rent,0);
+const mortInterest=()=>Math.round((state.bld?state.bld.mort:0)*MORT_RATE/365);
+const clinicRent=()=>state.bld&&(state.bld.floor||state.bld.own)?0:Math.max(0,RENT-state.rentDiscount);
+const floorPrice=()=>Math.round(state.bld.value*.2/1e6)*1e6;
+const bldPrice=(k=1)=>Math.round(state.bld.value*(state.bld.floor?.8:1)*k/1e6)*1e6;
+function rollOffers(fl){
+  const keys=Object.keys(TENANTS).filter(k=>TENANTS[k].fl.includes(fl)&&!hasTen(k));const out=[];
+  while(out.length<2&&keys.length){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];const f=R(.85,1.2);
+    out.push({k,rent:Math.round(TENANTS[k].rent*f/1e4)*1e4,cred:f>1.08?RI(1,2):RI(2,3)});}
+  return out;
+}
+function buyBuilding(k,loan){
+  const B=state.bld,price=bldPrice(k),down=loan?Math.round(price*(1-MORT_LTV)):price;
+  if(B.own||state.money<down)return false;
+  state.money-=down;if(loan)B.mort+=price-down;B.own=true;B.floor=true;B.ownDay=state.day;B.ten={};B.offers={};B.offerDay=state.day;
+  FLOORS.forEach(f=>{B.offers[f]=rollOffers(f);});
+  log(`<b>${BLD_NAME}</b> 매입 (${won(price)}${loan?`, 담보대출 ${won(price-down)}`:''})`);return true;
+}
+function stockTick(){
+  ensureInv();const I=state.inv,out={hit:[],div:0,fresh:null};
+  STOCKS.forEach(x=>{const g=(Math.random()+Math.random()+Math.random()-1.5)*x.vol*2;I.px[x.id]=Math.max(x.p0*.08,I.px[x.id]*Math.exp(g+x.drift));});
+  I.news.forEach(n=>{if(n.done||state.day<n.due)return;n.done=true;const m=n.good?1+n.mag:1-n.mag;I.px[n.sid]*=m;n.move=m-1;out.hit.push(n);});
+  if(dowOf(state.day)===0){const h=I.hold.gr;if(h&&h.sh>0){out.div=Math.round(h.sh*I.px.gr*SMAP.gr.div);state.money+=out.div;}}
+  if(I.news.filter(n=>!n.done).length<2&&state.day>2&&Math.random()<.45){
+    const pool=NEWS.map((_,i)=>i).filter(i=>!I.used.includes(i));const k=pick(pool.length?pool:NEWS.map((_,i)=>i));
+    const N=NEWS[k],coin=N.sid==='cc',good=N.good===null?Math.random()<.5:!!N.good;
+    const hype=coin?R(.05,.2):good?R(.02,.08):R(.06,.15);
+    const mag=coin?R(.3,.7):good?R(.2,.45):R(.25,.45);
+    I.px[N.sid]*=1+hype;
+    const n={k,sid:N.sid,good,mag,hype,day:state.day,due:state.day+RI(2,4),done:false};I.news.push(n);out.fresh=n;
+    I.used.push(k);if(I.used.length>9)I.used.shift();
+  }
+  STOCKS.forEach(x=>{const H=I.hist[x.id];H.push(Math.round(I.px[x.id]));if(H.length>30)H.shift();});
+  I.news=I.news.filter(n=>!n.done||state.day-n.due<6);
+  return out;
+}
+function bldTick(){
+  ensureInv();const B=state.bld;
+  B.value=Math.round(B.value*Math.exp((Math.random()+Math.random()-1)*.012+.0006));
+  if(B.own&&state.day-B.offerDay>=7){B.offerDay=state.day;FLOORS.forEach(f=>{if(!B.ten[f])B.offers[f]=rollOffers(f);});}
+}
+function buyStock(id,amt){
+  ensureInv();const I=state.inv;amt=Math.min(amt,state.money);if(amt<1e4)return;
+  const h=I.hold[id]||{sh:0,cost:0};h.sh+=amt*(1-STOCK_FEE)/I.px[id];h.cost+=amt;I.hold[id]=h;state.money-=amt;
+  sfx('buy');toast(`${SMAP[id].name} ${won(amt)} 매수`);
+}
+function sellStock(id,frac){
+  const I=state.inv,h=I.hold[id];if(!h||h.sh<=0)return;
+  const sh=h.sh*frac,got=Math.round(sh*I.px[id]*(1-STOCK_FEE)),c=h.cost*frac;
+  h.sh-=sh;h.cost-=c;I.realized+=got-c;state.money+=got;if(frac>=1||h.sh*I.px[id]<1)delete I.hold[id];
+  sfx('coin');toast(`${SMAP[id].name} ${won(got)} 매도 (${got-c>=0?'+':''}${won(got-c)})`);
+}
+const stockVal=id=>{const h=state.inv.hold[id];return h?h.sh*state.inv.px[id]:0;};
+function spark(H){
+  if(H.length<2)return'';const mn=Math.min(...H),mx=Math.max(...H),w=120,h=30;
+  const pts=H.map((v,i)=>`${(i/(H.length-1)*w).toFixed(1)},${(h-2-(mx>mn?(v-mn)/(mx-mn):.5)*(h-4)).toFixed(1)}`).join(' ');
+  return`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${H[H.length-1]>=H[0]?'var(--good)':'var(--bad)'}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+const pctTxt=d=>`<span class="${d>=0?'up':'neg'}">${d>=0?'▲':'▼'}${Math.abs(d*100).toFixed(1)}%</span>`;
+function renderInvest(){
+  ensureInv();const s=state,I=s.inv,B=s.bld,tab=s.invTab||'stock';
+  const tabs=[['stock','📈 주식·코인'],['bld','🏢 건물']].map(([k,l])=>`<button class="btn sm" data-act="invtab" data-arg="${k}" aria-pressed="${tab===k}">${l}</button>`).join('');
+  let body='';
+  if(tab==='stock'){
+    const tot=STOCKS.reduce((a,x)=>a+stockVal(x.id),0),cost=Object.values(I.hold).reduce((a,h)=>a+h.cost,0);
+    const news=I.news.slice().sort((a,b)=>(a.done-b.done)||(b.day-a.day)).map(n=>{const N=NEWS[n.k],st=SMAP[n.sid];
+      const res=n.done?`<p class="nres"><b>${n.move>=0?'📈 급등':'📉 급락'} ${pctTxt(n.move)}</b> ${N.why}</p>`:`<p class="nres pend">결과 반영까지 D-${Math.max(0,n.due-s.day)} · 발표 직후 ${pctTxt(n.hype)} 들썩였어요</p>`;
+      return`<div class="news ${n.done?'done':''}"><div class="nh"><span class="nsrc ${N.src==='단톡방'?'rumor':''}">${N.src}</span><span class="nst">${st.name}</span></div><h4>${N.t}</h4><p>${N.b}</p>${res}</div>`;}).join('');
+    body=`<p class="lead">보유 평가액 <b>${won(tot)}</b>${cost?` · 평가손익 ${pctTxt((tot-cost)/cost)} (${won(tot-cost)})`:''} · 실현 손익 <b class="${I.realized<0?'neg':''}">${won(I.realized)}</b></p>
+      <h3 class="tx-h">📰 뉴스</h3><div class="newslist">${news||'<p class="hint">아직 뉴스가 없어요. 아침마다 새 소식이 올라올 수 있어요.</p>'}</div>
+      <h3 class="tx-h">종목</h3><div class="shop">${STOCKS.map(x=>{const H=I.hist[x.id],p=I.px[x.id],prev=H.length>1?H[H.length-2]:p,h=I.hold[x.id],v=stockVal(x.id);
+        return`<div class="item"><h3>${x.name}</h3><p>${x.sec}</p>${spark(H)}
+        <span class="price">${won(p)} ${pctTxt(p/prev-1)}</span>
+        ${h?`<span class="price">보유 ${won(v)} ${pctTxt((v-h.cost)/h.cost)}</span>`:''}
+        <div class="ctl">${[1e6,1e7,1e8].map(a=>`<button class="btn sm primary" data-act="sbuy" data-arg="${x.id}:${a}" ${s.money<a?'disabled':''}>+${won(a).replace('원','')}</button>`).join('')}</div>
+        ${h?`<div class="ctl"><button class="btn sm" data-act="ssell" data-arg="${x.id}:.5">절반 매도</button><button class="btn sm danger" data-act="ssell" data-arg="${x.id}:1">전량 매도</button></div>`:''}</div>`;}).join('')}</div>
+      <p class="hint">뉴스가 뜨면 주가가 일단 들썩이고, 2~4일 뒤 진짜 결과가 반영돼요. 임상 결과를 의사의 눈으로 판단해 보세요. 단톡방 루머는 근거가 없어서 반반이에요. 사고팔 때 수수료 0.3%.</p>`;
+  }else{
+    const net=B.value-B.mort,inc=tenantRent(),mi=mortInterest();
+    let st=`<div class="item bld-card"><h3>🏢 ${BLD_NAME} <small>(5층)</small></h3>
+      <p>건물 시세 <b>${won(B.value)}</b>${B.own?` · 담보대출 ${won(B.mort)} · 순자산 <b>${won(net)}</b>`:''}<br>
+      ${B.own?`우리 건물이에요! 하루 임대 수입 <b class="up">+${won(inc)}</b>${mi?` · 대출 이자 -${won(mi)}`:''}`:B.floor?'3층(우리 의원)은 내 소유라 임대료가 없어요.':`지금은 3층을 빌려 쓰고 있어요. 하루 임대료 ${won(clinicRent())}.`}</p></div>`;
+    let acts='';
+    if(!B.own){
+      if(!B.floor)acts+=`<div class="item"><h3>우리 층(3층) 매입</h3><p>임대료가 0원이 돼요. 시세의 20%.</p><span class="price">${won(floorPrice())}</span><button class="btn sm primary" data-act="bfloor" ${s.money<floorPrice()?'disabled':''}>매입</button></div>`;
+      const p=bldPrice(),dn=Math.round(p*(1-MORT_LTV));
+      acts+=`<div class="item"><h3>건물 통째로 매입</h3><p>층마다 세입자를 골라 임대 수입을 받고, 세입자와 시너지를 만들 수 있어요.${B.floor?' 3층 소유분은 빼고 계산했어요.':''}</p><span class="price">${won(p)}</span>
+        <div class="ctl"><button class="btn sm primary" data-act="bbuy" data-arg="loan" ${s.money<dn?'disabled':''}>대출 끼고 (계약금 ${won(dn)})</button><button class="btn sm" data-act="bbuy" data-arg="cash" ${s.money<p?'disabled':''}>현금으로</button></div>
+        <p class="hint">담보대출은 시세의 ${MORT_LTV*100}%까지, 연 ${MORT_RATE*100}%예요.</p></div>`;
+    }else{
+      acts+=FLOORS.map(f=>{const t=B.ten[f];
+        if(t){const T=TENANTS[t.k];return`<div class="item"><h3>${f}층 · ${T.ic} ${T.name}</h3><p>${T.fx}<br>신용 ${'★'.repeat(t.cred)}${'☆'.repeat(3-t.cred)}</p><span class="price">하루 임대료 ${won(t.rent)}</span><button class="btn sm danger" data-act="bevict" data-arg="${f}">내보내기</button></div>`;}
+        const of=B.offers[f]||[];
+        return`<div class="item"><h3>${f}층 · <span class="neg">공실</span></h3><p>입주 희망 세입자${of.length?'':'가 아직 없어요. 매주 새로 찾아와요.'}</p>
+          ${of.map((o,i)=>{const T=TENANTS[o.k];return`<div class="offer"><b>${T.ic} ${T.name}</b> · 하루 ${won(o.rent)} · 신용 ${'★'.repeat(o.cred)}${'☆'.repeat(3-o.cred)}<br><small>${T.fx}</small><br><button class="btn sm primary" data-act="bten" data-arg="${f}:${i}" ${hasTen(o.k)?'disabled':''}>${hasTen(o.k)?'이미 입주한 업종':'입주시키기'}</button></div>`;}).join('')}</div>`;}).join('');
+      const room=Math.max(0,Math.floor((B.value*MORT_LTV-B.mort)/1e8)*1e8);
+      acts+=`<div class="item"><h3>💳 담보대출</h3><p>잔액 ${won(B.mort)} · 연 ${MORT_RATE*100}% · 하루 이자 ${won(mi)}<br>시세가 오르면 추가로 빌릴 수 있어요 (최대 시세의 ${MORT_LTV*100}%).</p>
+        <div class="ctl">${B.mort>0?`<button class="btn sm" data-act="bmort" data-arg="1e8" ${s.money<Math.min(1e8,B.mort)?'disabled':''}>1억 상환</button><button class="btn sm" data-act="bmort" data-arg="all" ${s.money<B.mort?'disabled':''}>전액 상환</button>`:''}
+        <button class="btn sm primary" data-act="brefi" ${room<1e8?'disabled':''}>추가 대출 ${room>=1e8?'1억':'불가'}</button></div></div>`;
+      const sellGet=Math.round(B.value*.97)-B.mort;
+      acts+=`<div class="item"><h3>건물 매각</h3><p>시세의 97%를 받고 대출을 갚아요. 다시 3층을 빌려 쓰게 돼요.</p><span class="price">손에 쥐는 돈 ${won(sellGet)}</span>
+        ${s.bldSellAsk?`<div class="ctl"><button class="btn sm" data-act="bsellno">취소</button><button class="btn sm danger" data-act="bsell">정말 팔기</button></div>`:`<button class="btn sm danger" data-act="bsellask">매각하기</button>`}</div>`;
+    }
+    body=st+`<div class="shop">${acts}</div><p class="hint">건물 시세는 매일 조금씩 움직이고, 개발 호재 같은 이벤트로 크게 뛰기도 해요. 신용이 낮은 세입자는 임대료를 더 내지만 연체할 수 있어요.</p>`;
+  }
+  return`<h2>재테크</h2><p class="lead">운영 자금 <b class="${s.money<0?'neg':''}">${won(s.money)}</b></p><div class="tabs">${tabs}</div>${body}
+    <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`;
+}
 
 /* 가상 명화를 도트로 그리기 (24×18 칸) */
 function paintArt(c,a,x0,y0,w,h){
