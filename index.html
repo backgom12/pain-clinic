@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-20T07:45:16.321Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-20T07:56:19.377Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -239,6 +239,9 @@ table.ledger tr.total td{font-weight:700;border-bottom:0;padding-top:8px}
 .chip:hover:not(:disabled){border-color:var(--teal)}
 .chip[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal);font-weight:700}
 .chip.again{border-style:dashed;border-color:var(--teal);color:var(--teal)}
+.shot *{animation:none!important;transition:none!important}.shot .mode-note,.shot .toasts{display:none!important}
+.shot-room .stats,.shot-room .scene,.shot-room .queue,.shot-room .log,.shot-room .nav{display:none!important}
+.shot-tx .cc-quote,.shot-tx .vas-wrap,.shot-tx .xray-box,.shot-tx .findings,.shot-tx .chart-head{display:none!important}
 .btn.ic{padding:8px 10px;line-height:1}
 .office-wrap{flex:none;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
 .office-wrap canvas{display:block;width:100%;aspect-ratio:240/135;image-rendering:pixelated}
@@ -531,7 +534,8 @@ function fresh(name,diff){const D=DIFFS[diff]||DIFFS.normal;return{v:2,diff:DIFF
   auto:!!D.auto,autoSpeed:1,autoPaused:false,autoLog:[],rating:D.rating||3.5,fatigue:100,level:1,xp:0,
   totalTreated:0,overtreat:0,owned:{...D.owned},staff:{assoc:0,...D.staff},youtube:0,ads:0,seminar:0,pharmacy:false,rentDiscount:0,
   mods:[],returning:[],evtUsed:{},titleIdx:0,loanDone:D.loan<=0,log:[],today:null,modal:null,shopTab:'equip',flagCatch:0,flagMiss:0,uid:1};}
-function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
+const SHOT=(()=>{try{return new URLSearchParams(location.search).get('shot');}catch(e){return null;}})();
+function save(){if(SHOT)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&s.v===2?s:null;}catch(e){return null;}}
 function log(html){state.log.push({t:state.today?clock(state.today.time):'',d:state.day,html});if(state.log.length>80)state.log.shift();}
 function toast(msg){const box=document.getElementById('toasts');const el=document.createElement('div');el.className='toast';el.textContent=msg;box.appendChild(el);setTimeout(()=>el.remove(),2600);}
@@ -1820,7 +1824,26 @@ function sfx(name,arg){
 }
 
 /* ---------- boot ---------- */
+/* 스토어 스크린샷용 데모 화면 (?shot=1~5). 저장하지 않음 */
+function setupShot(n){
+  const gold=n===3||n===4;newGame('김원장 통증의학과',gold?'gold':'normal');state.modal=null;state.mode='quick';state.audio={music:false,sfx:false};
+  Object.assign(state,{day:24,rating:4.62,level:8,xp:120,titleIdx:3,totalTreated:640});
+  if(gold){state.auto=true;state.autoSpeed=8;for(let i=0;i<400&&state.day<30;i++){if(state.modal&&state.modal.type==='event')chooseEvent(0);autoTick();if(state.modal&&state.modal.type!=='event')state.modal=null;}}
+  state.today=null;startDay();if(state.modal){state.today.pending=false;state.modal=null;genArrivals();}
+  advance(gold?260:120);
+  if(!gold){let p;do{p=genPatient(state.today.time-12,state.today);}while(!(p.dx==='lumbar'&&p.vas>=6&&!p.conservative));p.xray=true;p.arrive=state.today.time-12;
+    state.today.queue.unshift(p);state.today.sel=p.id;const C=DDX.lumbar;
+    if(n===1||n===5){p.picks=[C[0],C[1]];p.txSel=['tfeb','med'];}
+    if(n===2){p.picks=[C[0],C[1],C[2]];treatMulti(['tfeb','med','pt']);}}
+  if(n===4){ensureOffice();FURN.forEach(f=>state.office.furn[f.k]=true);state.office.art=[{id:'a7',paid:2.2e8},{id:'a4',paid:1.6e7},{id:'a3',paid:1.2e8}];
+    state.office.wall=['a7','a4','a3'];state.office.lobby='a4';state.officeTab='mine';state.modal={type:'office'};}
+  document.body.classList.add('shot');
+  if(n===1||n===2||n===5)document.body.classList.add('shot-room');
+  if(n===5)document.body.classList.add('shot-tx');
+  render();
+}
 function boot(data){
+  if(SHOT){setupShot(+SHOT);return;}
   state=(data&&data.state)||load();
   if(!state){newGame('김원장 통증의학과');state.modal={type:'intro'};}
   if(!Array.isArray(state.returning))state.returning=[];
