@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-20T12:35:57.947Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T01:19:04.979Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -251,6 +251,19 @@ table.ledger tr.total td{font-weight:700;border-bottom:0;padding-top:8px}
 .up{color:var(--good)}
 .spark{width:100%;height:30px;display:block}
 .modal.still{animation:none}
+.hob{position:fixed;inset:0;z-index:65;background:var(--scrim);display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px))}
+.hob-box{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:420px;max-height:100%;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.hob-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hob-top b{font-family:var(--f-display);font-size:20px}
+.hob canvas{width:100%;aspect-ratio:360/400;border-radius:10px;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.hob-msg{margin:0;font-size:13.5px;min-height:2.6em}
+.hob-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hob-ctl .btn.primary{flex:1;min-height:46px;font-size:15px}
+.hold-btn{touch-action:none;user-select:none;-webkit-user-select:none}
+.fishdex{display:flex;flex-wrap:wrap;gap:4px}
+.fishdex span{font-size:11.5px;border:1px dashed var(--line);border-radius:8px;padding:1px 6px;color:var(--muted)}
+.fishdex span.on{border-style:solid;color:var(--ink)}
+.fishdex span.on.g-r{border-color:var(--muted)}.fishdex span.on.g-m{border-color:var(--amber);color:var(--amber)}
 .item .ctl .btn[aria-pressed="true"]{background:var(--teal-soft);border-color:var(--teal);font-weight:700}
 .newslist{display:flex;flex-direction:column;gap:8px}
 .news{border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:10px 12px;background:var(--paper);display:flex;flex-direction:column;gap:4px}
@@ -592,7 +605,10 @@ function startDay(){
     cap:{unit:0,manual:0,eswt:0},patienceMod:0,extra:0,boost:null,vip:false,startRating:state.rating,startMoney:state.money,stars:[],pending:false,ended:false};
   state.today=T;
   const pool=EVENTS.filter(e=>(!e.once||!state.evtUsed[e.id])&&!(state.evtUsed[e.id]&&state.day-state.evtUsed[e.id]<7)&&e.cond(state));
-  if(state.day>1&&pool.length&&Math.random()<.42){const e=pick(pool);state.evtUsed[e.id]=state.day;T.pending=true;state.modal={type:'event',id:e.id};}
+  /* 골프에서 약속받은 이벤트(예: 건물 급매)는 다음 날 아침 반드시 와요 */
+  const forced=state.forceEvt&&EVENTS.find(e=>e.id===state.forceEvt);state.forceEvt=null;
+  if(forced&&forced.cond(state)){state.evtUsed[forced.id]=state.day;T.pending=true;state.modal={type:'event',id:forced.id};}
+  else if(state.day>1&&pool.length&&Math.random()<.42){const e=pick(pool);state.evtUsed[e.id]=state.day;T.pending=true;state.modal={type:'event',id:e.id};}
   else genArrivals();
 }
 function patientCount(T){
@@ -954,6 +970,7 @@ function render(){
       <button class="btn ic" data-act="sfxtoggle" aria-pressed="${audioPref().sfx}" aria-label="효과음 ${audioPref().sfx?'끄기':'켜기'}" title="효과음">${audioPref().sfx?'🔔':'🔕'}</button>
       <button class="btn" data-act="office">🖼 원장실</button>
       <button class="btn" data-act="invest">📈 재테크</button>
+      <button class="btn" data-act="hobby">🎯 취미</button>
       <button class="btn ${s.auto?'primary':''}" data-act="auto" aria-pressed="${!!s.auto}">${s.auto?'자동 운영 중':'자동 운영'}</button>
       ${Ads.on?'<button class="btn" data-act="rewards">🎁 보상</button>':''}
       <button class="btn" data-act="shop">투자·채용</button>
@@ -1181,6 +1198,7 @@ function renderModal(){
       <div class="row"><button class="btn primary" data-act="close">알겠어요</button></div>`,true);
   }else if(m.type==='office'){ensureOffice();h=modal(renderOffice(),true);
   }else if(m.type==='invest'){h=modal(renderInvest(),true);
+  }else if(m.type==='hobby'){h=modal(renderHobbyMenu(),true);
   }else if(m.type==='rewards'){
     const u=adUses();
     h=modal(`<h2>🎁 광고 보고 보상 받기</h2><p class="lead">짧은 광고를 끝까지 보면 보상을 받아요. 횟수는 매일 다시 채워져요.</p>
@@ -1244,10 +1262,10 @@ const NativeApp={A:null};
 (async()=>{try{const C=window.Capacitor;if(!C||!C.isNativePlatform||!C.isNativePlatform())return;
   const A=C.registerPlugin('App');await A.addListener('backButton',onBack);NativeApp.A=A;}catch(e){}})();
 function onBack(){
-  if(!state)return;const m=state.modal,T=state.today;
+  if(!state)return;if(HB.el){hobbyClose();return;}const m=state.modal,T=state.today;
   if(T&&T.grading)return;
   if(m&&m.type==='exitAsk'){NativeApp.A&&NativeApp.A.exitApp();return;}
-  if(m&&['shop','help','office','invest','rewards','confirmNew','loanDone'].includes(m.type)){act('close');return;}
+  if(m&&['shop','help','office','invest','hobby','rewards','confirmNew','loanDone'].includes(m.type)){act('close');return;}
   if(m)return; /* 아침 이벤트·결산·첫 화면은 버튼으로 골라야 해요 */
   save();openOverlay('exitAsk');render();
 }
@@ -1279,7 +1297,7 @@ let pointerDown=false;
 document.addEventListener('pointerdown',()=>{pointerDown=true;},true);
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{pointerDown=false;},true));
 function autoTick(){
-  if(!state||!state.auto||state.autoPaused||pointerDown||Ads.busy)return;
+  if(!state||!state.auto||state.autoPaused||pointerDown||Ads.busy||HB.el)return;
   const T=state.today;if(!T)return;
   if(state.modal){if(state.modal.type!=='event')return;
     const e=EVENTS.find(x=>x.id===state.modal.id);toast(`[아침 일정] ${val(e.title)} → ${val(e.opts[0].label)}`);chooseEvent(0);save();render();return;}
@@ -1327,6 +1345,10 @@ function act(a,arg){
     case'sfxtoggle':state.audio=state.audio||{music:true,sfx:true};state.audio.sfx=!state.audio.sfx;break;
     case'office':ensureOffice();openOverlay('office');break;
     case'otab':state.officeTab=arg;break;
+    case'hobby':ensureHobby();openOverlay('hobby');break;
+    case'hplay':{if(arg==='golf'&&(ensureHobby().golfDay===state.day||state.money<GOLF_FEE))break;if(arg==='fish'&&castsLeft()<=0)break;
+      if((arg==='concert'||String(arg).startsWith('piano'))&&!hasPiano())break;
+      hobbyOpen(arg==='golf'||arg==='fish'?arg:'piano',arg==='concert'?'concert':String(arg).split(':')[1]);break;}
     case'exitapp':save();if(NativeApp.A)NativeApp.A.exitApp();return;
     case'invest':ensureInv();state.bldSellAsk=false;openOverlay('invest');break;
     case'invtab':state.invTab=arg;state.bldSellAsk=false;break;
@@ -1823,6 +1845,19 @@ function closeDeposit(i,early){
   const I=state.inv,d=I.dep[i];if(!d)return 0;
   const got=Math.round(d.bal+d.acc*(early?DEP_PENALTY:1));state.money+=got;I.dep.splice(i,1);return got;
 }
+/* 새 뉴스 한 건을 띄워요. filter로 뉴스 종류를 고를 수 있어요 (골프 동반자 정보용) */
+function spawnNews(filter){
+  ensureInv();const I=state.inv;const all=NEWS.map((_,i)=>i).filter(i=>!filter||filter(i));if(!all.length)return null;
+  const pool=all.filter(i=>!I.used.includes(i));const k=pick(pool.length?pool:all);
+  const N=NEWS[k],coin=N.sid==='cc',mk=N.sid==='mkt',good=N.good===null?Math.random()<.5:!!N.good;
+  const nm=mk?1:(SMAP[N.sid].nmag||1);
+  const hype=mk?0:(coin?R(.05,.2):good?R(.02,.08):R(.06,.15))*nm;
+  const mag=mk?R(.04,.1):(coin?R(.3,.7):good?R(.2,.45):R(.25,.45))*nm;
+  applyMove(N.sid,hype);
+  const n={k,sid:N.sid,good,mag,hype,day:state.day,due:state.day+RI(2,4),done:false};I.news.push(n);
+  I.used.push(k);if(I.used.length>12)I.used.shift();
+  return n;
+}
 function stockTick(){
   ensureInv();const I=state.inv,out={hit:[],div:0,fresh:null,matured:[],dca:0};
   const days=Math.max(1,state.day-(I.lastDay||state.day-1));I.lastDay=state.day;
@@ -1838,16 +1873,7 @@ function stockTick(){
     Object.entries(I.dca).forEach(([id,a])=>{if(a>0&&state.money>=a){const h=I.hold[id]||{sh:0,cost:0};h.sh+=a*(1-STOCK_FEE)/I.px[id];h.cost+=a;I.hold[id]=h;state.money-=a;out.dca+=a;}});
   }
   for(let i=I.dep.length-1;i>=0;i--){const d=I.dep[i];if(state.day>=d.due){const int=Math.round(d.acc);out.matured.push({type:d.type,got:closeDeposit(i,false),int});}}
-  if(I.news.filter(n=>!n.done).length<2&&state.day>2&&Math.random()<.45){
-    const pool=NEWS.map((_,i)=>i).filter(i=>!I.used.includes(i));const k=pick(pool.length?pool:NEWS.map((_,i)=>i));
-    const N=NEWS[k],coin=N.sid==='cc',mk=N.sid==='mkt',good=N.good===null?Math.random()<.5:!!N.good;
-    const nm=mk?1:(SMAP[N.sid].nmag||1);
-    const hype=mk?0:(coin?R(.05,.2):good?R(.02,.08):R(.06,.15))*nm;
-    const mag=mk?R(.04,.1):(coin?R(.3,.7):good?R(.2,.45):R(.25,.45))*nm;
-    applyMove(N.sid,hype);
-    const n={k,sid:N.sid,good,mag,hype,day:state.day,due:state.day+RI(2,4),done:false};I.news.push(n);out.fresh=n;
-    I.used.push(k);if(I.used.length>12)I.used.shift();
-  }
+  if(I.news.filter(n=>!n.done).length<2&&state.day>2&&Math.random()<.45)out.fresh=spawnNews();
   STOCKS.forEach(x=>{const H=I.hist[x.id];H.push(Math.round(I.px[x.id]));if(H.length>30)H.shift();});
   I.news=I.news.filter(n=>!n.done||state.day-n.due<6);
   return out;
@@ -2055,6 +2081,344 @@ function drawOffice(cv,dt){
     c.fillStyle='#111';c.fillRect(k.face<0?x-1:x+7,y,1,1);}
 }
 
+/* ---------- 취미 미니게임: 골프 · 낚시 · 피아노 ----------
+   일반 모달과 달리 매 프레임 그려야 해서 #app 밖에 따로 띄워요 (render()가 지우지 않도록). */
+const GOLF_FEE=5e5,CASTS_PER_DAY=5,CONCERT_GAP=7;
+const FISH=[
+ {id:'crucian',name:'붕어',g:'c',w:[.2,1.2],p:15000,str:.8,col:'#8a7a4a'},
+ {id:'carp',name:'잉어',g:'c',w:[1,6],p:12000,str:1,col:'#a8863a'},
+ {id:'catfish',name:'메기',g:'c',w:[.8,5],p:15000,str:1.1,col:'#4a4a3a'},
+ {id:'bass',name:'배스',g:'r',w:[.5,3.5],p:20000,str:1.25,col:'#5a7a3a'},
+ {id:'mandarin',name:'쏘가리',g:'r',w:[.4,2.5],p:60000,str:1.35,col:'#b89a4a'},
+ {id:'snakehead',name:'가물치',g:'r',w:[1.5,8],p:25000,str:1.5,col:'#3a4a2a'},
+ {id:'goldcarp',name:'황금 잉어',g:'m',w:[3,12],p:150000,str:1.75,col:'#f2c12e'},
+ {id:'boot',name:'헌 장화',g:'j',w:[.6,.6],p:0,str:.5,col:'#5a3a22'}
+];
+const FISH_W={c:30,r:10,m:2.5,j:7};
+const CLUBS=[['dr','드라이버',250],['wd','우드',210],['ir','아이언',160],['wg','웨지',100]];
+const GOLF_MATES=[
+ {k:'pharma',name:'제약회사 상무님',desc:'친해지면 주식 정보를 슬쩍 흘려줘요'},
+ {k:'broker',name:'부동산 중개인',desc:'건물 매물과 세입자 소식에 밝아요'},
+ {k:'doc',name:'옆 동네 정형외과 원장님',desc:'친해지면 시술 환자를 보내줘요'}
+];
+const SONGS=[
+ {name:'아침 왈츠',secs:[['A',0]],need:0},
+ {name:'오후의 왈츠',secs:[['A',0],['B',0]],need:70},
+ {name:'원장실 콘서트',secs:[['A',0],['B',0],['C',0],['A',12]],need:70}
+];
+function ensureHobby(){if(!state.hobby)state.hobby={golfDay:0,casts:{day:0,n:0},fish:{},fishDone:false,piano:{best:{},concertDay:-99}};return state.hobby;}
+function castsLeft(){const H=ensureHobby();if(H.casts.day!==state.day)H.casts={day:state.day,n:0};return CASTS_PER_DAY-H.casts.n;}
+const songOpen=i=>i===0||((ensureHobby().piano.best[i-1]||0)>=SONGS[i].need);
+const hasPiano=()=>!!(state.office&&state.office.furn&&state.office.furn.piano);
+function renderHobbyMenu(){
+  const s=state,H=ensureHobby(),P=H.piano,golfed=H.golfDay===s.day,cl=castsLeft();
+  const caught=FISH.filter(f=>f.g!=='j'&&H.fish[f.id]).length,total=FISH.filter(f=>f.g!=='j').length;
+  const cd=CONCERT_GAP-(s.day-P.concertDay);
+  return`<h2>🎯 취미</h2><p class="lead">진료만 하면 지치죠. 취미로 인맥도 쌓고, 도감도 모으고, 연주회도 열어보세요.</p>
+   <div class="shop">
+    <div class="item"><h3>⛳ 골프</h3><p>3홀 라운딩. 파워와 정확도를 타이밍 맞춰 멈추고, 바람을 읽어 클럽을 골라요. 동반자와 친해지면(점수가 좋을수록) 쓸모 있는 정보를 줘요.</p>
+      <span class="price">그린피 ${won(GOLF_FEE)} · 하루 1라운드${golfed?' · 오늘은 쳤어요':''}</span>
+      <button class="btn sm primary" data-act="hplay" data-arg="golf" ${golfed||s.money<GOLF_FEE?'disabled':''}>라운딩 나가기</button></div>
+    <div class="item"><h3>🎣 낚시</h3><p>찌가 쑥 들어가면 바로 챔질! 누르고 있으면 감기고, 장력이 너무 세지면 줄이 끊어져요. 잡은 고기는 횟집에 팔아요.</p>
+      <span class="price">오늘 남은 캐스팅 ${cl}/${CASTS_PER_DAY} · 도감 ${caught}/${total}</span>
+      <div class="fishdex">${FISH.filter(f=>f.g!=='j').map(f=>`<span class="${H.fish[f.id]?'on':''} g-${f.g}">${H.fish[f.id]?`${f.name} ${H.fish[f.id].toFixed(1)}kg`:'???'}</span>`).join('')}</div>
+      <button class="btn sm primary" data-act="hplay" data-arg="fish" ${cl<=0?'disabled':''}>낚시하러 가기</button></div>
+    <div class="item"><h3>🎹 피아노</h3>${hasPiano()?`<p>떨어지는 음표를 타이밍 맞춰 눌러요. 70점을 넘기면 다음 곡이 열려요. 연주회에서 A등급 이상이면 평점이 오르고 환자가 늘어요.</p>
+      <div class="ctl">${SONGS.map((g,i)=>`<button class="btn sm" data-act="hplay" data-arg="piano:${i}" ${songOpen(i)?'':'disabled'}>${songOpen(i)?'':'🔒 '}${g.name}${P.best[i]?` · ${P.best[i]}점`:''}</button>`).join('')}</div>
+      <button class="btn sm primary" data-act="hplay" data-arg="concert" ${cd>0?'disabled':''}>🎤 대기실 연주회 열기${cd>0?` (${cd}일 뒤)`:''}</button>`
+      :`<p>원장실에 그랜드 피아노가 있어야 칠 수 있어요. 원장실 → 가구에서 들여놓으세요.</p><button class="btn sm" data-act="office">원장실로 가기</button>`}</div>
+   </div>
+   <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`;
+}
+const HB={el:null,cv:null,ctx:null,raf:0,g:null,kind:null,last:0};
+function hobbyOpen(kind,opt){
+  if(HB.el)return;
+  state.modal=null;state.modalBack=null;
+  const el=document.createElement('div');el.className='hob';
+  el.innerHTML=`<div class="hob-box" role="dialog" aria-modal="true" aria-labelledby="hb-title"><div class="hob-top"><b id="hb-title"></b><button class="btn sm" data-h="close">그만하기</button></div>
+    <canvas id="hb-cv" width="360" height="400"></canvas><p class="hob-msg" id="hb-msg" aria-live="polite"></p><div class="hob-ctl" id="hb-ctl"></div></div>`;
+  document.body.appendChild(el);HB.el=el;HB.cv=el.querySelector('canvas');HB.ctx=HB.cv.getContext('2d');HB.kind=kind;
+  HB.cv.addEventListener('pointerdown',e=>{e.preventDefault();audioUnlock();hbInput('down',e);});
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>HB.cv.addEventListener(t,e=>hbInput('up',e)));
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-h]');if(!b||b.disabled)return;sfx('click');hbButton(b.dataset.h,b.dataset.arg);});
+  /* 길게 누르는 버튼(낚시 감기)도 손가락으로 쓸 수 있게 */
+  el.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-hold]');if(b){e.preventDefault();hbInput('down',e);}});
+  el.addEventListener('pointerup',e=>{if(e.target.closest('[data-hold]'))hbInput('up',e);});
+  HB.g=kind==='golf'?golfNew():kind==='fish'?fishNew():pianoNew(opt);
+  HB.last=performance.now();HB.raf=requestAnimationFrame(hbLoop);hbUI();save();
+}
+function hobbyClose(){
+  cancelAnimationFrame(HB.raf);const G=HB.g;if(HB.kind==='piano'&&audioPref().music)musicStart();
+  if(HB.el)HB.el.remove();HB.el=null;HB.g=null;HB.kind=null;
+  state.modal={type:'hobby'};save();render();if(G&&G.toast)toast(G.toast);
+}
+function hbLoop(ts){if(!HB.el)return;const dt=Math.min(.05,(ts-HB.last)/1000);HB.last=ts;const G=HB.g;
+  if(HB.kind==='golf')golfStep(G,dt);else if(HB.kind==='fish')fishStep(G,dt);else pianoStep(G,dt);
+  HB.raf=requestAnimationFrame(hbLoop);}
+const hbMsg=t=>{const m=document.getElementById('hb-msg');if(m)m.innerHTML=t;};
+const hbCtl=h=>{const c=document.getElementById('hb-ctl');if(c)c.innerHTML=h;};
+function hbUI(){const G=HB.g;if(!G)return;document.getElementById('hb-title').textContent=HB.kind==='golf'?'⛳ 골프':HB.kind==='fish'?'🎣 낚시':'🎹 피아노';
+  if(HB.kind==='golf')golfUI(G);else if(HB.kind==='fish')fishUI(G);else pianoUI(G);}
+function hbInput(type,e){const G=HB.g;if(!G)return;if(HB.kind==='golf'){if(type==='down')golfTap(G);}else if(HB.kind==='fish')fishInput(G,type);else if(type==='down')pianoTap(G,e);}
+function hbButton(a,arg){if(a==='close'){hobbyClose();return;}const G=HB.g;if(!G)return;
+  if(HB.kind==='golf'){if(a==='club'){G.club=arg;golfUI(G);}else if(a==='hit')golfTap(G);}
+  else if(HB.kind==='fish'){if(a==='cast')fishCast(G);}
+  else if(a==='again'){HB.g=pianoNew(G.opt);hbUI();}}
+document.addEventListener('keydown',e=>{if(!HB.el||e.repeat)return;
+  if(e.key==='Escape'){hobbyClose();return;}
+  if(HB.kind==='piano'){const l='dfjk'.indexOf(e.key.toLowerCase());if(l>=0){e.preventDefault();pianoHit(HB.g,l);}return;}
+  if(e.key===' '||e.key==='Enter'){e.preventDefault();hbInput('down',e);}});
+document.addEventListener('keyup',e=>{if(HB.el&&(e.key===' '||e.key==='Enter'))hbInput('up',e);});
+function cvText(c,t,x,y,{size=13,col='#fff',align='left',bold=false}={}){c.font=`${bold?'700 ':''}${size}px system-ui,sans-serif`;c.textAlign=align;c.fillStyle='rgba(0,0,0,.45)';c.fillText(t,x+1,y+1);c.fillStyle=col;c.fillText(t,x,y);}
+
+/* ===== 골프 ===== */
+function golfNew(){
+  const H=ensureHobby();H.golfDay=state.day;state.money-=GOLF_FEE;
+  const holes=[R(140,190),R(300,380),R(430,490)].map(Math.round).sort(()=>Math.random()-.5).map(d=>({d,par:d<=200?3:d<=400?4:5}));
+  const G={holes,h:0,x:0,strokes:0,scores:[],wind:RI(-8,8),club:'dr',lie:'tee',phase:'aim',p:0,a:0,t:0,anim:null,note:'',mate:pick(GOLF_MATES)};
+  G.note=`오늘 동반자: <b>${G.mate.name}</b> (${G.mate.desc})`;golfAutoClub(G);return G;
+}
+const golfLeft=G=>Math.abs(G.holes[G.h].d-G.x);
+function golfAutoClub(G){const d=golfLeft(G);G.club=d>230?'dr':d>185?'wd':d>130?'ir':'wg';}
+function golfUI(G){
+  const hole=G.holes[G.h],d=golfLeft(G),green=G.lie==='green';
+  if(G.phase==='done'){hbCtl(`<button class="btn primary" data-h="close">돌아가기</button>`);return;}
+  hbMsg(G.note||'');
+  if(G.phase==='aim')hbCtl(green?`<button class="btn primary" data-h="hit">퍼팅 준비 (화면 탭)</button>`
+    :`<div class="seg">${CLUBS.map(([k,n,m])=>`<button class="btn sm" data-h="club" data-arg="${k}" aria-pressed="${G.club===k}">${n} ${m}m</button>`).join('')}</div><button class="btn primary" data-h="hit">스윙 시작 (화면 탭)</button>`);
+  else if(G.phase==='power'||G.phase==='acc'||G.phase==='putt')hbCtl(`<button class="btn primary" data-h="hit">${G.phase==='power'?'파워 멈추기':G.phase==='acc'?'정확도 멈추기':'퍼팅!'} (화면 탭)</button>`);
+  else if(G.phase==='holed')hbCtl(`<button class="btn primary" data-h="hit">${G.h<G.holes.length-1?'다음 홀로':'라운딩 끝내기'}</button>`);
+  else hbCtl('');
+}
+function golfTap(G){
+  if(G.phase==='aim'){G.t=0;G.phase=G.lie==='green'?'putt':'power';G.note=G.lie==='green'?'게이지를 남은 거리에 맞춰 멈추세요. (눈금 5m 간격)':'파워 게이지를 원하는 곳에서 멈추세요.';golfUI(G);return;}
+  if(G.phase==='power'){G.p=golfPow(G.t);G.t=0;G.phase='acc';G.note='가운데 초록 칸에 가까울수록 정확해요!';golfUI(G);return;}
+  if(G.phase==='acc'){G.a=Math.sin(G.t*5.2);golfShot(G);golfUI(G);return;}
+  if(G.phase==='putt'){G.p=golfPow(G.t*.8);golfPutt(G);golfUI(G);return;}
+  if(G.phase==='holed'){if(G.h<G.holes.length-1){G.h++;G.x=0;G.strokes=0;G.lie='tee';G.wind=RI(-8,8);G.phase='aim';golfAutoClub(G);G.note=`${G.h+1}번 홀 · 파 ${G.holes[G.h].par} · ${G.holes[G.h].d}m`;}else golfFinish(G);golfUI(G);}
+}
+const golfPow=t=>1-Math.abs((t*1.1)%2-1);
+function golfShot(G){
+  const hole=G.holes[G.h],cl=CLUBS.find(c=>c[0]===G.club);let max=cl[2];if(G.lie==='rough')max*=.8;if(G.lie==='bunker')max*=.6;
+  const err=Math.abs(G.a);let dist=Math.max(5,max*G.p*(1-.35*err)+G.wind*(max/250));G.strokes++;let note='';
+  if(err>.93){G.strokes++;dist=0;note='OB! 1벌타를 받고 같은 자리에서 다시 쳐요.';}
+  else G.lie=err>.6?(Math.random()<.5?'rough':'bunker'):'fair';
+  const dir=G.x<=hole.d?1:-1,from=G.x;G.x=Math.max(0,G.x+dist*dir);
+  let left=golfLeft(G);
+  if(dist>0&&left<=1.2){G.x=hole.d;left=0;note=G.strokes===1?'🎉 홀인원!!!':'칩인 버디 찬스… 들어갔어요!';}
+  else if(dist>0&&left<=25)G.lie='green';
+  G.anim={from,to:G.x,t:0};G.phase='fly';
+  G.note=note||`${Math.round(dist)}m 날아갔어요. ${G.lie==='rough'?'러프에 빠졌어요 (다음 샷 -20%)':G.lie==='bunker'?'벙커! (다음 샷 -40%)':G.lie==='green'?'그린 위에 올라갔어요!':''}`;
+  sfx(dist>0?'click':'bad');
+}
+function golfPutt(G){
+  const left=golfLeft(G),need=Math.min(1,left/25),err=G.p-need;G.strokes++;
+  const miss=Math.abs(err)*25;const from=G.x,hole=G.holes[G.h];
+  if(miss<=.8){G.x=hole.d;G.note='땡그랑! 홀컵에 쏙 들어갔어요.';sfx('coin');}
+  else{const dir=G.x<=hole.d?1:-1;G.x=hole.d-dir*(err>0?-1:1)*miss;G.note=err>0?`너무 셌어요. ${miss.toFixed(1)}m 지나갔어요.`:`짧았어요. ${miss.toFixed(1)}m 남았어요.`;}
+  G.anim={from,to:G.x,t:0};G.phase='fly';
+}
+function golfAfterFly(G){
+  const hole=G.holes[G.h],left=golfLeft(G);
+  if(left<.01||G.strokes>=hole.par+4){
+    if(left>=.01)G.note+=` (공을 집었어요)`;
+    const sc=left<.01?G.strokes:hole.par+4;G.scores.push(sc);const df=sc-hole.par;
+    G.note+=` <b>${G.h+1}번 홀 ${sc}타 · ${df===0?'파':df<0?(df===-1?'버디!':df===-2?'이글!!':'앨버트로스?!'):df===1?'보기':df===2?'더블 보기':'+'+df}</b>`;
+    G.phase='holed';if(df<0)sfx('level');
+  }else G.phase='aim';
+  if(G.phase==='aim'&&G.lie!=='green')golfAutoClub(G);
+  golfUI(G);
+}
+function golfFinish(G){
+  const tot=G.scores.reduce((a,b)=>a+b,0),par=G.holes.reduce((a,b)=>a+b.par,0),df=tot-par;
+  const q=df<=0?3:df<=3?2:1;const M=G.mate;let msg='';
+  if(M.k==='pharma'){
+    ensureInv();let n=state.inv.news.find(x=>!x.done&&x.sid!=='mkt'&&x.sid!=='cc');
+    if(!n)n=spawnNews(i=>!['mkt','cc'].includes(NEWS[i].sid)&&NEWS[i].good!==null);
+    if(n){const right=Math.random()<[0,.55,.8,1][q],says=right?n.good:!n.good;
+      msg=`"${sname(n.sid)} 그 소식이요… ${says?'업계에선 기대가 꽤 커요. 결과 좋을 겁니다.':'솔직히 내부 평가는 별로예요. 조심하세요.'}" <br><small>(친밀도 ${'★'.repeat(q)}${'☆'.repeat(3-q)} · 친할수록 정확해요. 재테크 뉴스를 확인해 보세요)</small>`;}
+    else msg='"요즘은 업계가 조용하네요. 다음에 또 쳐요!"';
+  }else if(M.k==='broker'){
+    ensureInv();const B=state.bld;
+    if(!B.own){if(q>=2){state.forceEvt='bargain';msg='"건물주가 급하게 내놓을 것 같아요. 내일 아침에 연락드릴게요!" <br><small>(계약금이 있으면 내일 아침 급매 소식이 와요)</small>';}else msg='"요즘 괜찮은 매물이 잘 안 나오네요."';}
+    else{const f=FLOORS.find(x=>!B.ten[x]);
+      if(f&&q>=2){const keys=Object.keys(TENANTS).filter(k=>TENANTS[k].fl.includes(f)&&!hasTen(k));const k=pick(keys);
+        B.offers[f]=[{k,rent:Math.round(TENANTS[k].rent*1.15/1e4)*1e4,cred:3},...(B.offers[f]||[])].slice(0,3);
+        msg=`"${f}층에 들어올 우량 세입자를 소개해 드릴게요." <br><small>(${TENANTS[k].name} · 신용 ★★★ · 재테크 → 건물에서 확인)</small>`;}
+      else{B.value=Math.round(B.value*(1+.01*q));msg=`"이 동네 시세가 꽤 오르고 있어요." <br><small>(건물 시세 +${q}%)</small>`;}}
+  }else{addMod(q+1,5,'골프 인맥');msg=`"시술 필요한 환자는 원장님께 보낼게요!" <br><small>(5일 동안 하루 환자 +${q+1}명)</small>`;}
+  G.phase='done';G.toast=`골프 ${tot}타 (${df>=0?'+':''}${df}) · ${M.name}와(과) 라운딩`;
+  G.note=`<b>라운딩 끝! ${tot}타 (파 ${par}, ${df>=0?'+':''}${df})</b><br>${M.name}: ${msg}`;
+  log(`⛳ 골프 ${tot}타 (${df>=0?'+':''}${df}) · ${M.name}`);save();
+}
+function golfStep(G,dt){
+  G.t+=dt;if(G.phase==='fly'){G.anim.t+=dt/.9;if(G.anim.t>=1){G.anim=null;golfAfterFly(G);}}
+  golfDraw(G);
+}
+function golfDraw(G){
+  const c=HB.ctx,W=360,Hh=400;if(!c)return;const hole=G.holes[Math.min(G.h,G.holes.length-1)];
+  c.fillStyle='#3f8f4a';c.fillRect(0,0,W,Hh);
+  for(let i=0;i<40;i++){c.fillStyle=i%2?'#469a51':'#3b8645';c.fillRect((i*37)%W,(i*53)%260,6,6);}
+  c.fillStyle='#62b55e';c.beginPath();c.ellipse(180,150,170,70,0,0,Math.PI*2);c.fill();
+  const toX=v=>24+Math.min(1.08,v/hole.d)*300;
+  c.fillStyle='#8fd27a';c.beginPath();c.ellipse(toX(hole.d),150,34,24,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#e6d39a';c.beginPath();c.ellipse(toX(hole.d*.72),196,22,10,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#2f6e8f';c.beginPath();c.ellipse(toX(hole.d*.45),102,26,12,0,0,Math.PI*2);c.fill();
+  [[40,60],[300,240],[110,250],[250,60],[330,70]].forEach(([x,y])=>{c.fillStyle='#2b5e34';c.beginPath();c.arc(x,y,14,0,Math.PI*2);c.fill();c.fillStyle='#5a3a22';c.fillRect(x-2,y+10,4,8);});
+  c.fillStyle='#d8d0b8';c.fillRect(16,140,14,20);
+  const fx=toX(hole.d);c.fillStyle='#222';c.fillRect(fx-1,118,2,32);c.fillStyle='#e0362b';c.fillRect(fx+1,118,14,9);c.fillStyle='#111';c.beginPath();c.arc(fx,150,3,0,Math.PI*2);c.fill();
+  let bx=toX(G.x),by=150;if(G.anim){const k=G.anim.t;bx=toX(G.anim.from+(G.anim.to-G.anim.from)*k);by=150-Math.sin(k*Math.PI)*(G.lie==='green'||G.phase==='fly'&&Math.abs(G.anim.to-G.anim.from)<30?3:60);}
+  c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.ellipse(bx,153,4,2,0,0,Math.PI*2);c.fill();c.fillStyle='#fff';c.beginPath();c.arc(bx,by,3.5,0,Math.PI*2);c.fill();
+  /* 정보 */
+  c.fillStyle='rgba(10,30,20,.55)';c.fillRect(0,0,W,26);
+  cvText(c,`${G.h+1}/${G.holes.length}번 홀 · 파 ${hole.par} · ${G.strokes}타`,8,18,{bold:true});
+  cvText(c,`남은 거리 ${golfLeft(G).toFixed(G.lie==='green'?1:0)}m`,352,18,{align:'right'});
+  const w=G.wind;cvText(c,`바람 ${w===0?'없음':(w>0?'뒤바람 +':'맞바람 ')+w+'m'}`,8,48,{size:12});
+  cvText(c,`${G.lie==='tee'?'티샷':G.lie==='rough'?'러프':G.lie==='bunker'?'벙커':G.lie==='green'?'그린':'페어웨이'}`,352,48,{size:12,align:'right'});
+  /* 게이지 */
+  c.fillStyle='rgba(10,30,20,.7)';c.fillRect(0,280,W,120);
+  if(G.lie==='green'||G.phase==='putt'){
+    const v=G.phase==='putt'?golfPow(G.t*.8):G.p;cvText(c,'퍼팅 힘 (0~25m)',16,302,{size:12});
+    c.fillStyle='#22332a';c.fillRect(16,312,328,24);c.fillStyle='#e0b23a';c.fillRect(16,312,328*v,24);
+    for(let m=5;m<=25;m+=5){const x=16+328*m/25;c.fillStyle='#fff';c.fillRect(x,312,1,24);cvText(c,m+'m',x,350,{size:10,align:'center'});}
+  }else{
+    const pv=G.phase==='power'?golfPow(G.t):G.p;cvText(c,`파워 (${CLUBS.find(x=>x[0]===G.club)[1]} 최대 ${CLUBS.find(x=>x[0]===G.club)[2]}m)`,16,302,{size:12});
+    c.fillStyle='#22332a';c.fillRect(16,310,328,20);const gr=c.createLinearGradient(16,0,344,0);gr.addColorStop(0,'#6fb7d8');gr.addColorStop(1,'#e0362b');c.fillStyle=gr;c.fillRect(16,310,328*pv,20);
+    cvText(c,`약 ${Math.round(CLUBS.find(x=>x[0]===G.club)[2]*pv)}m`,344,302,{size:12,align:'right'});
+    cvText(c,'정확도',16,352,{size:12});c.fillStyle='#22332a';c.fillRect(16,358,328,18);c.fillStyle='#4caf50';c.fillRect(180-30,358,60,18);c.fillStyle='#e0b23a';c.fillRect(180-100,358,40,18);c.fillRect(180+60,358,40,18);
+    const av=G.phase==='acc'?Math.sin(G.t*5.2):G.phase==='power'||G.phase==='aim'?0:G.a;c.fillStyle='#fff';c.fillRect(180+av*164-2,354,4,26);
+  }
+}
+
+/* ===== 낚시 ===== */
+function fishNew(){return{phase:'ready',t:0,wait:0,win:0,fish:null,prog:.3,ten:.2,hold:false,nextSurge:1,res:'',twitch:0};}
+function fishUI(G){
+  const cl=castsLeft();
+  if(G.phase==='ready'){hbMsg(G.res||'저수지에 도착했어요. 찌를 던져볼까요?');hbCtl(cl>0?`<button class="btn primary" data-h="cast">찌 던지기 (남은 ${cl}번)</button>`:`<span class="hint">오늘 캐스팅을 다 썼어요. 내일 또 와요!</span>`);}
+  else if(G.phase==='wait')hbMsg('찌를 지켜보세요… 쑥 들어가면 바로 화면을 탭!'),hbCtl(`<button class="btn" data-hold="1">챔질 (화면 탭)</button>`);
+  else if(G.phase==='fight')hbMsg('누르고 있으면 감겨요. 장력이 빨간색에 닿기 전에 손을 떼세요!'),hbCtl(`<button class="btn primary hold-btn" data-hold="1">꾹 눌러서 감기</button>`);
+}
+function fishCast(G){if(G.phase!=='ready'||castsLeft()<=0)return;ensureHobby().casts.n++;G.phase='wait';G.t=0;G.wait=R(1.8,5.5);G.twitch=0;sfx('click');fishUI(G);save();}
+function fishPick(){let tot=FISH.reduce((a,f)=>a+FISH_W[f.g],0),r=Math.random()*tot;for(const f of FISH){r-=FISH_W[f.g];if(r<=0)return f;}return FISH[0];}
+function fishInput(G,type){
+  if(type==='up'){G.hold=false;return;}
+  if(G.phase==='ready'){fishCast(G);return;}
+  if(G.phase==='wait'){G.phase='ready';G.res='너무 일찍 챔질했어요. 고기가 도망갔어요.';sfx('bad');fishUI(G);return;}
+  if(G.phase==='bite'){G.phase='fight';G.prog=.3;G.ten=.25;G.hold=true;G.nextSurge=R(.6,1.6);sfx('click');fishUI(G);return;}
+  if(G.phase==='fight')G.hold=true;
+}
+function fishEnd(G,ok,why){
+  const H=ensureHobby(),f=G.fish;G.hold=false;
+  if(ok){const w=f.g==='j'?.6:Math.round((f.w[0]+(f.w[1]-f.w[0])*Math.pow(Math.random(),1.6))*10)/10;
+    if(f.g==='j'){G.res='헌 장화를 낚았어요… 😅';}
+    else{const first=!H.fish[f.id],rec=!first&&w>H.fish[f.id];H.fish[f.id]=Math.max(H.fish[f.id]||0,w);const pay=Math.round(w*f.p/1e3)*1e3;state.money+=pay;
+      G.res=`<b>${f.name} ${w}kg</b>${first?' · 🆕 도감 등록!':rec?' · 🏆 최고 기록!':''} · 횟집에 ${won(pay)}에 팔았어요.`;sfx(f.g==='m'?'level':'coin');
+      log(`🎣 ${f.name} ${w}kg`);
+      if(!H.fishDone&&FISH.every(x=>x.g==='j'||H.fish[x.id])){H.fishDone=true;state.rating=clamp(state.rating+.05,1,5);G.res+='<br>🎉 <b>도감 완성!</b> "강태공 원장님" 소문이 나서 평점 +0.05';}}
+  }else{G.res=why;sfx('bad');}
+  G.phase='ready';fishUI(G);save();
+}
+function fishStep(G,dt){
+  G.t+=dt;
+  if(G.phase==='wait'){if(G.t>=G.wait){G.phase='bite';G.fish=fishPick();G.win=G.fish.g==='m'?.55:G.fish.g==='r'?.7:.85;G.t=0;sfx('click');}}
+  else if(G.phase==='bite'){if(G.t>G.win){G.phase='ready';G.res='챔질이 늦었어요. 미끼만 따먹고 갔어요.';fishUI(G);}}
+  else if(G.phase==='fight'){const s=G.fish.str;
+    if(G.hold){G.prog+=dt*.2/s;G.ten+=dt*(.32+.18*s);}else{G.prog-=dt*.06*s;G.ten-=dt*.55;}
+    G.nextSurge-=dt;if(G.nextSurge<=0){G.ten+=.12*s+R(0,.08);G.prog-=.03*s;G.nextSurge=R(.7,1.8)/s;}
+    G.ten=Math.max(0,G.ten);
+    if(G.ten>=1)fishEnd(G,false,`투둑! 줄이 끊어졌어요. ${G.fish.g==='m'?'엄청 큰 놈이었는데…':''}`);
+    else if(G.prog<=0)fishEnd(G,false,'고기가 바늘을 털고 도망갔어요.');
+    else if(G.prog>=1)fishEnd(G,true);}
+  fishDraw(G);
+}
+function fishDraw(G){
+  const c=HB.ctx,W=360;if(!c)return;const t=performance.now()/1000;
+  const sky=c.createLinearGradient(0,0,0,150);sky.addColorStop(0,'#f2b98a');sky.addColorStop(1,'#f6dcb4');c.fillStyle=sky;c.fillRect(0,0,W,150);
+  c.fillStyle='#ffe7a8';c.beginPath();c.arc(280,70,22,0,Math.PI*2);c.fill();
+  c.fillStyle='#6f8a5a';c.beginPath();c.moveTo(0,150);for(let x=0;x<=W;x+=30)c.lineTo(x,120+Math.sin(x*.05)*12);c.lineTo(W,150);c.fill();
+  const wat=c.createLinearGradient(0,150,0,400);wat.addColorStop(0,'#4f8fa8');wat.addColorStop(1,'#1f4a64');c.fillStyle=wat;c.fillRect(0,150,W,250);
+  c.fillStyle='rgba(255,255,255,.18)';for(let i=0;i<14;i++){const y=165+i*16,x=((i*71+t*12)%(W+60))-30;c.fillRect(x,y,28,2);}
+  c.fillStyle='#7a5230';c.fillRect(0,300,120,14);c.fillRect(20,314,8,86);c.fillRect(90,314,8,86);
+  /* 원장님 + 낚싯대 */
+  c.fillStyle='#38444a';c.fillRect(40,268,14,32);c.fillStyle='#f1c9a5';c.fillRect(41,256,12,12);c.fillStyle='#2a221d';c.fillRect(40,254,14,5);
+  const bobX=230,bobBase=225;let bobY=bobBase+Math.sin(t*2)*1.5;
+  if(G.phase==='wait'){if(Math.random()<.01)G.twitch=.25;if(G.twitch>0){G.twitch-=.016;bobY+=3;}}
+  if(G.phase==='bite')bobY+=10;if(G.phase==='fight')bobY+=14+Math.sin(t*14)*4;
+  c.strokeStyle='#3a2a1a';c.lineWidth=2;c.beginPath();c.moveTo(52,262);c.lineTo(150,190);c.stroke();
+  if(G.phase!=='ready'){c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=1;c.beginPath();c.moveTo(150,190);c.quadraticCurveTo(200,200,bobX,bobY);c.stroke();
+    c.fillStyle='#e0362b';c.fillRect(bobX-3,bobY-8,6,8);c.fillStyle='#fff';c.fillRect(bobX-3,bobY,6,4);
+    if(G.phase==='bite')cvText(c,'!',bobX,bobY-16,{size:26,col:'#ffeb3b',align:'center',bold:true});}
+  if(G.phase==='fight'){const f=G.fish;c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(bobX+Math.sin(t*3)*30,bobY+40,18+f.str*8,7,0,0,Math.PI*2);c.fill();
+    c.fillStyle='rgba(10,20,30,.7)';c.fillRect(0,340,W,60);
+    cvText(c,'감은 정도',14,358,{size:12});c.fillStyle='#22333f';c.fillRect(90,348,256,12);c.fillStyle='#6fd88a';c.fillRect(90,348,256*clamp(G.prog,0,1),12);
+    cvText(c,'줄 장력',14,384,{size:12});c.fillStyle='#22333f';c.fillRect(90,374,256,12);
+    const tg=c.createLinearGradient(90,0,346,0);tg.addColorStop(0,'#6fb7d8');tg.addColorStop(.7,'#e0b23a');tg.addColorStop(1,'#e0362b');c.fillStyle=tg;c.fillRect(90,374,256*clamp(G.ten,0,1),12);
+    c.fillStyle='#fff';c.fillRect(90+256*.85,370,2,20);}
+  const H=ensureHobby();cvText(c,`남은 캐스팅 ${castsLeft()}/${CASTS_PER_DAY}`,10,20,{size:12,col:'#3a2a1a'});
+}
+
+/* ===== 피아노 (리듬 게임) ===== */
+const P_UNIT=.3,P_LEAD=2.2,P_FALL=1.6,P_HITY=340;
+function pianoNew(opt){
+  const concert=opt==='concert',si=concert?2:+opt||0,song=SONGS[si];
+  musicStop();
+  const notes=[],bass=[];let bar=0;
+  song.secs.forEach(([k,oct])=>SEC[k].ch.forEach((ch,i)=>{const t0=P_LEAD+bar*6*P_UNIT;bass.push({t:t0,m:ch.b,done:false});
+    (SEC[k].mel[i]||[]).forEach(([m,st,len])=>notes.push({t:t0+st*P_UNIT,m:m+oct,len,hit:null}));bar++;}));
+  const ps=notes.map(n=>n.m),lo=Math.min(...ps),hi=Math.max(...ps);
+  notes.forEach(n=>{n.lane=clamp(Math.floor((n.m-lo)/(hi-lo+1)*4),0,3);});
+  return{opt,si,concert,notes,bass,t:0,score:0,combo:0,maxCombo:0,judge:'',jt:0,flash:[0,0,0,0],end:notes[notes.length-1].t+1.6,done:false};
+}
+function pianoUI(G){
+  const s=SONGS[G.si];
+  if(G.done){hbCtl(`<button class="btn" data-h="again">다시 치기</button><button class="btn primary" data-h="close">돌아가기</button>`);return;}
+  hbMsg(`${G.concert?'🎤 대기실 연주회':'연습'} · <b>${s.name}</b> · 화면의 칸을 탭하세요 (키보드 D F J K)`);hbCtl('');
+}
+function pianoTap(G,e){const r=HB.cv.getBoundingClientRect();const lane=clamp(Math.floor((e.clientX-r.left)/r.width*4),0,3);pianoHit(G,lane);}
+function pianoHit(G,lane){
+  if(!G||G.done)return;G.flash[lane]=.15;let best=null;
+  G.notes.forEach(n=>{if(n.hit===null&&n.lane===lane){const d=Math.abs(n.t-G.t);if(d<.22&&(!best||d<Math.abs(best.t-G.t)))best=n;}});
+  if(!best)return;const d=Math.abs(best.t-G.t);
+  if(d<.075){best.hit=100;G.judge='PERFECT';}else if(d<.15){best.hit=60;G.judge='GOOD';}else{best.hit=0;G.judge='MISS';}
+  if(best.hit){G.combo++;G.maxCombo=Math.max(G.maxCombo,G.combo);if(Snd.ctx)voice(mtof(best.m+12),Snd.ctx.currentTime,P_UNIT*best.len+.5,{type:'triangle',vol:.09,attack:.004,dest:Snd.music,filter:3600});}else G.combo=0;
+  G.jt=.5;
+}
+function pianoStep(G,dt){
+  if(!G.done){G.t+=dt;
+    G.bass.forEach(b=>{if(!b.done&&G.t>=b.t){b.done=true;if(Snd.ctx)voice(mtof(b.m),Snd.ctx.currentTime,P_UNIT*6,{type:'sine',vol:.08,attack:.01,dest:Snd.music,filter:500});}});
+    G.notes.forEach(n=>{if(n.hit===null&&G.t>n.t+.22){n.hit=0;G.combo=0;G.judge='MISS';G.jt=.5;}});
+    if(G.t>G.end)pianoFinish(G);}
+  G.jt=Math.max(0,G.jt-dt);G.flash=G.flash.map(f=>Math.max(0,f-dt));
+  pianoDraw(G);
+}
+function pianoFinish(G){
+  G.done=true;const H=ensureHobby(),P=H.piano;const pct=Math.round(G.notes.reduce((a,n)=>a+(n.hit||0),0)/G.notes.length);
+  const gr=pct>=95?'S':pct>=85?'A':pct>=70?'B':'C';G.pct=pct;G.grade=gr;const prev=P.best[G.si]||0;P.best[G.si]=Math.max(prev,pct);
+  let msg=`<b>${gr}등급 · ${pct}점</b> · 최대 콤보 ${G.maxCombo}${pct>prev?' · 🏆 최고 기록!':''}`;
+  if(G.si<SONGS.length-1&&prev<SONGS[G.si+1].need&&pct>=SONGS[G.si+1].need)msg+=`<br>🔓 새 곡이 열렸어요: ${SONGS[G.si+1].name}`;
+  if(G.concert){P.concertDay=state.day;
+    if(gr==='S'||gr==='A'){state.rating=clamp(state.rating+(gr==='S'?.05:.03),1,5);addMod(gr==='S'?3:2,5,'원장님 연주회');msg+=`<br>👏 대기실이 박수로 가득! 평점 +${gr==='S'?'0.05':'0.03'}, 5일 동안 하루 환자 +${gr==='S'?3:2}명`;sfx('level');G.toast='연주회 대성공!';}
+    else msg+='<br>연주회는 무난하게 끝났어요. 다음엔 A등급 이상을 노려봐요!';
+    log(`🎹 대기실 연주회 ${gr}등급 (${pct}점)`);}
+  hbMsg(msg);pianoUI(G);save();
+}
+function pianoDraw(G){
+  const c=HB.ctx,W=360,Hh=400;if(!c)return;const lw=W/4;
+  c.fillStyle='#1a1410';c.fillRect(0,0,W,Hh);
+  for(let l=0;l<4;l++){c.fillStyle=l%2?'#221a14':'#2a2018';c.fillRect(l*lw,0,lw,Hh);if(G.flash[l]>0){c.fillStyle=`rgba(224,178,58,${G.flash[l]*2})`;c.fillRect(l*lw,0,lw,P_HITY+30);}}
+  c.fillStyle='#e0b23a';c.fillRect(0,P_HITY,W,3);
+  G.notes.forEach(n=>{const dy=(n.t-G.t)/P_FALL;if(dy>1.05||(n.hit!==null&&G.t-n.t>.25))return;const y=P_HITY-dy*P_HITY;const h=18;
+    c.fillStyle=n.hit>0?'rgba(111,216,138,.4)':n.hit===0?'rgba(224,54,43,.5)':'#f4efe4';c.fillRect(n.lane*lw+8,y-h,lw-16,h);c.fillStyle='rgba(0,0,0,.25)';c.fillRect(n.lane*lw+8,y-3,lw-16,3);});
+  /* 건반 */
+  for(let l=0;l<4;l++){c.fillStyle=G.flash[l]>0?'#f2e6c8':'#fbf6ea';c.fillRect(l*lw+2,P_HITY+6,lw-4,Hh-P_HITY-8);cvText(c,'DFJK'[l],l*lw+lw/2,Hh-14,{size:12,col:'#8a7a62',align:'center'});}
+  c.fillStyle='#111';[1,2,3].forEach(i=>c.fillRect(i*lw-7,P_HITY+6,14,26));
+  if(G.jt>0)cvText(c,G.judge,W/2,170,{size:26,col:G.judge==='PERFECT'?'#e0b23a':G.judge==='GOOD'?'#6fd88a':'#e0362b',align:'center',bold:true});
+  if(G.combo>2)cvText(c,`${G.combo} 콤보`,W/2,200,{size:14,align:'center'});
+  const prog=clamp(G.t/G.end,0,1);c.fillStyle='#3a2c1c';c.fillRect(0,0,W,4);c.fillStyle='#e0b23a';c.fillRect(0,0,W*prog,4);
+  if(G.t<P_LEAD-.3)cvText(c,G.t<P_LEAD-1.2?'준비…':'시작!',W/2,120,{size:22,align:'center',bold:true});
+  if(G.done)cvText(c,`${G.grade} · ${G.pct}점`,W/2,140,{size:34,col:'#e0b23a',align:'center',bold:true});
+}
+
 /* ---------- 소리: 잔잔한 배경음악 + 효과음 (WebAudio로 직접 합성) ---------- */
 const Snd={ctx:null,master:null,music:null,sfx:null};
 const Music={timer:null,next:0,step:0};
@@ -2069,7 +2433,7 @@ function audioInit(){
   return true;
 }
 const audioPref=()=>state&&state.audio?state.audio:{music:true,sfx:true};
-function audioUnlock(){if(!audioInit())return;if(Snd.ctx.state==='suspended')Snd.ctx.resume().catch(()=>{});if(audioPref().music)musicStart();}
+function audioUnlock(){if(!audioInit())return;if(Snd.ctx.state==='suspended')Snd.ctx.resume().catch(()=>{});if(audioPref().music&&!(typeof HB!=='undefined'&&HB.kind==='piano'))musicStart();}
 document.addEventListener('pointerdown',audioUnlock,true);
 document.addEventListener('visibilitychange',()=>{if(!Snd.ctx)return;if(document.hidden)Snd.ctx.suspend().catch(()=>{});else Snd.ctx.resume().catch(()=>{});});
 const mtof=m=>440*Math.pow(2,(m-69)/12);
