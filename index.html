@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T01:19:04.979Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T01:21:25.231Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -1297,7 +1297,8 @@ let pointerDown=false;
 document.addEventListener('pointerdown',()=>{pointerDown=true;},true);
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{pointerDown=false;},true));
 function autoTick(){
-  if(!state||!state.auto||state.autoPaused||pointerDown||Ads.busy||HB.el)return;
+  /* 취미 미니게임 중에도 자동 운영은 계속 돌아가요 (미니게임 창은 #app 밖에 있어서 다시 그려져도 안전) */
+  if(!state||!state.auto||state.autoPaused||(pointerDown&&!HB.el)||Ads.busy)return;
   const T=state.today;if(!T)return;
   if(state.modal){if(state.modal.type!=='event')return;
     const e=EVENTS.find(x=>x.id===state.modal.id);toast(`[아침 일정] ${val(e.title)} → ${val(e.opts[0].label)}`);chooseEvent(0);save();render();return;}
@@ -1334,7 +1335,7 @@ function renderAuto(){
    ${log.length?`<div style="overflow-x:auto"><table class="ledger auto-log"><thead><tr><td>일차</td><td>진료</td><td>이탈</td><td>매출</td><td>순이익</td></tr></thead><tbody>
      ${log.map(r=>`<tr><td>${r.day}일차 (${r.dow})</td><td>${r.served}명</td><td>${r.lost}명</td><td>${won(r.revenue)}</td><td class="${r.net<0?'neg':''}">${won(r.net)}</td></tr>`).join('')}</tbody></table></div>`
      :'<p class="hint">하루가 끝나면 여기에 결산이 쌓여요.</p>'}
-   <p class="hint">원장님은 진료하지 않아요. 아침 이벤트는 첫 번째 선택지로 자동 처리돼요. 투자·채용 창을 여는 동안은 시간이 멈춰요.</p>`;
+   <p class="hint">원장님은 진료하지 않아요. 아침 이벤트는 첫 번째 선택지로 자동 처리돼요. 투자·채용 같은 창을 여는 동안은 시간이 멈추고, 골프·낚시·피아노를 하는 동안에는 병원이 계속 돌아가요.</p>`;
 }
 function openOverlay(type){state.modalBack=state.modal&&state.modal.type!==type?state.modal:null;state.modal={type};}
 function act(a,arg){
