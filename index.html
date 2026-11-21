@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T02:15:31.797Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T02:18:38.786Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -2155,11 +2155,30 @@ const GOLF_MATES=[
  {k:'broker',name:'부동산 중개인',desc:'건물 매물과 세입자 소식에 밝아요'},
  {k:'doc',name:'옆 동네 정형외과 원장님',desc:'친해지면 시술 환자를 보내줘요'}
 ];
+/* 피아노 난이도 = 빠르기. 고르면 곡은 랜덤 */
 const SONGS=[
- {name:'아침 왈츠',secs:[['A',0]],need:0},
- {name:'오후의 왈츠',secs:[['A',0],['B',0]],need:70},
- {name:'원장실 콘서트',secs:[['A',0],['B',0],['C',0],['A',12]],need:70}
+ {name:'🌅 쉬움',unit:.27,need:0},
+ {name:'☀️ 보통',unit:.2,need:70},
+ {name:'🎤 어려움',unit:.155,need:70}
 ];
+/* 곡 목록: 저작권이 끝난 클래식·민요 + 게임 배경음악. "음높이(MIDI):길이(8분음표 단위)", r = 쉼표 */
+const PSONGS=[
+ {name:'작은 별',by:'프랑스 민요',seq:'60:2 60:2 67:2 67:2 69:2 69:2 67:4 65:2 65:2 64:2 64:2 62:2 62:2 60:4 67:2 67:2 65:2 65:2 64:2 64:2 62:4 67:2 67:2 65:2 65:2 64:2 64:2 62:4 60:2 60:2 67:2 67:2 69:2 69:2 67:4 65:2 65:2 64:2 64:2 62:2 62:2 60:4'},
+ {name:'환희의 송가',by:'베토벤',seq:'64:2 64:2 65:2 67:2 67:2 65:2 64:2 62:2 60:2 60:2 62:2 64:2 64:3 62 62:4 64:2 64:2 65:2 67:2 67:2 65:2 64:2 62:2 60:2 60:2 62:2 64:2 62:3 60 60:4'},
+ {name:'엘리제를 위하여',by:'베토벤',seq:'76 75 76 75 76 71 74 72 69:2 r 60 64 69 71:2 r 64 68 71 72:2 r 64 76 75 76 75 76 71 74 72 69:2 r 60 64 69 71:2 r 64 72 71 69:4'},
+ {name:'캐논',by:'파헬벨',seq:'78:2 76:2 74:2 73:2 71:2 69:2 71:2 73:2 74:2 73:2 71:2 69:2 67:2 66:2 67:2 64:2 66 67 69 66 64 66 67 69 71 69 67 66 64 62 64 66 74:4'},
+ {name:'미뉴에트 G장조',by:'바흐 노트에서',seq:'74:2 67 69 71 72 74:2 67:2 67:2 76:2 72 74 76 78 79:2 67:2 67:2 72:2 74 72 71 69 71:2 72 71 69 67 66:2 67 69 71 67 69:4'},
+ {name:'그린슬리브스',by:'영국 민요',seq:'69 72:2 74 76:2 77 76:2 74 71:2 67 69:2 71 72:2 69 69:2 68 69:2 71 68:2 64:2 69 72:2 74 76:2 77 76:2 74 71:2 67 69:2 71 72 71 69 68 66 68 69:4'},
+ {name:'터키 행진곡',by:'모차르트',seq:'71 69 68 69 72:2 r:2 74 72 71 72 76:2 r:2 77 76 75 76 83 81 80 81 83 81 80 81 84:4 81:2 84:2 83 81 79 81 83 81 79 81 83 81 79 78 76:4'},
+ {name:'사계 중 봄',by:'비발디',seq:'76:2 80 80 80 78 76 83:4 r 83 81 80 80 80 78 76 83:4 r 83 81 80 81 83 81:2 80:2 78:4'},
+ {name:'오 수재너',by:'포스터',seq:'60 62 64:2 67:2 67:2 69:2 67:2 64:2 60:2 62:2 64:2 64:2 62:2 60:2 62:6 60 62 64:2 67:2 67:2 69:2 67:2 64:2 60:2 62:2 64:2 64:2 62:2 62:2 60:6'},
+ {name:'징글벨',by:'피어폰트',seq:'64:2 64:2 64:4 64:2 64:2 64:4 64:2 67:2 60:3 62 64:8 65:2 65:2 65:3 65 65:2 64:2 64:2 64 64 64:2 62:2 62:2 64:2 62:4 67:4'},
+ {name:'원장실 왈츠',by:'이 게임의 배경음악',seq:null}
+];
+function songSeq(s){
+  if(s.seq)return s.seq.split(' ').map(t=>{const[a,b]=t.split(':');return[a==='r'?null:+a,+(b||1)];});
+  const out=[];G_MEL.forEach(bar=>{let pos=0;bar.forEach(([m,st,len])=>{if(st>pos)out.push([null,st-pos]);out.push([m,len]);pos=st+len;});if(pos<6)out.push([null,6-pos]);});return out;
+}
 function ensureHobby(){if(!state.hobby)state.hobby={golfDay:0,casts:{day:0,n:0},fish:{},fishDone:false,piano:{best:{},concertDay:-99}};return state.hobby;}
 function castsLeft(){const H=ensureHobby();if(H.casts.day!==state.day)H.casts={day:state.day,n:0};return CASTS_PER_DAY-H.casts.n;}
 const songOpen=i=>i===0||((ensureHobby().piano.best[i-1]||0)>=SONGS[i].need);
@@ -2177,7 +2196,7 @@ function renderHobbyMenu(){
       <span class="price">오늘 남은 캐스팅 ${cl}/${CASTS_PER_DAY} · 도감 ${caught}/${total}</span>
       <div class="fishdex">${FISH.filter(f=>f.g!=='j').map(f=>`<span class="${H.fish[f.id]?'on':''} g-${f.g}">${H.fish[f.id]?`${f.name} ${H.fish[f.id].toFixed(1)}kg`:'???'}</span>`).join('')}</div>
       <button class="btn sm primary" data-act="hplay" data-arg="fish" ${cl<=0?'disabled':''}>낚시하러 가기</button></div>
-    <div class="item"><h3>🎹 피아노</h3>${hasPiano()?`<p>떨어지는 음표를 타이밍 맞춰 눌러요. 70점을 넘기면 다음 곡이 열려요. 연주회에서 A등급 이상이면 평점이 오르고 환자가 늘어요.</p>
+    <div class="item"><h3>🎹 피아노</h3>${hasPiano()?`<p>떨어지는 음표를 타이밍 맞춰 눌러요. 난이도를 고르면 ${PSONGS.length}곡 중 하나가 랜덤으로 나와요 (엘리제를 위하여, 터키 행진곡, 캐논…). 70점을 넘기면 다음 난이도가 열려요. 연주회는 열린 난이도 중 가장 어려운 걸로 치고, A등급 이상이면 평점이 오르고 환자가 늘어요.</p>
       <div class="ctl">${SONGS.map((g,i)=>`<button class="btn sm" data-act="hplay" data-arg="piano:${i}" ${songOpen(i)?'':'disabled'}>${songOpen(i)?'':'🔒 '}${g.name}${P.best[i]?` · ${P.best[i]}점`:''}</button>`).join('')}</div>
       <button class="btn sm primary" data-act="hplay" data-arg="concert" ${cd>0?'disabled':''}>🎤 대기실 연주회 열기${cd>0?` (${cd}일 뒤)`:''}</button>`
       :`<p>원장실에 그랜드 피아노가 있어야 칠 수 있어요. 원장실 → 가구에서 들여놓으세요.</p><button class="btn sm" data-act="office">원장실로 가기</button>`}</div>
@@ -2217,7 +2236,8 @@ function hbInput(type,e){const G=HB.g;if(!G)return;if(HB.kind==='golf'){if(type=
 function hbButton(a,arg){if(a==='close'){hobbyClose();return;}const G=HB.g;if(!G)return;
   if(HB.kind==='golf'){if(a==='club'){G.club=arg;golfUI(G);}else if(a==='hit')golfTap(G);}
   else if(HB.kind==='fish'){if(a==='cast')fishCast(G);}
-  else if(a==='again'){HB.g=pianoNew(G.opt);hbUI();}}
+  else if(a==='again'){HB.g=pianoNew(G.opt,G.k);hbUI();}
+  else if(a==='next'){HB.g=pianoNew(G.opt);hbUI();}}
 document.addEventListener('keydown',e=>{if(!HB.el||e.repeat)return;
   if(e.key==='Escape'){hobbyClose();return;}
   if(HB.kind==='piano'){const l='dfjk'.indexOf(e.key.toLowerCase());if(l>=0){e.preventDefault();pianoHit(HB.g,l);}return;}
@@ -2421,20 +2441,24 @@ function fishDraw(G){
 
 /* ===== 피아노 (리듬 게임) ===== */
 const P_UNIT=.3,P_LEAD=2.2,P_FALL=1.6,P_HITY=340;
-function pianoNew(opt){
-  const concert=opt==='concert',si=concert?2:+opt||0,song=SONGS[si];
+function pianoNew(opt,keepSong){
+  const P=ensureHobby().piano,concert=opt==='concert';
+  /* 연주회는 열린 난이도 중 가장 어려운 걸로 */
+  const si=concert?[2,1,0].find(i=>songOpen(i)):clamp(+opt||0,0,2),unit=SONGS[si].unit;
+  let k=keepSong;if(k==null){const pool=PSONGS.map((_,i)=>i).filter(i=>i!==P.last);k=pick(pool);}P.last=k;
   musicStop();
-  const notes=[],bass=[];let bar=0;
-  song.secs.forEach(([k,oct])=>SEC[k].ch.forEach((ch,i)=>{const t0=P_LEAD+bar*6*P_UNIT;bass.push({t:t0,m:ch.b,done:false});
-    (SEC[k].mel[i]||[]).forEach(([m,st,len])=>notes.push({t:t0+st*P_UNIT,m:m+oct,len,hit:null}));bar++;}));
-  const ps=notes.map(n=>n.m),lo=Math.min(...ps),hi=Math.max(...ps);
-  notes.forEach(n=>{n.lane=clamp(Math.floor((n.m-lo)/(hi-lo+1)*4),0,3);});
-  return{opt,si,concert,notes,bass,t:0,score:0,combo:0,maxCombo:0,judge:'',jt:0,flash:[0,0,0,0],end:notes[notes.length-1].t+1.6,done:false};
+  const notes=[],bass=[];let t=P_LEAD,u=0;
+  songSeq(PSONGS[k]).forEach(([m,len])=>{if(m!=null){notes.push({t,m,len,hit:null});if(u%6===0||len>=4)bass.push({t,m:m-24,done:false});}t+=len*unit;u+=len;});
+  /* 칸 배정: 음 높이 순서대로 4칸에 고르게 */
+  const ps=[...new Set(notes.map(n=>n.m))].sort((a,b)=>a-b);
+  notes.forEach(n=>{n.lane=clamp(Math.floor(ps.indexOf(n.m)/ps.length*4),0,3);});
+  return{opt,si,k,unit,concert,notes,bass,t:0,score:0,combo:0,maxCombo:0,judge:'',jt:0,flash:[0,0,0,0],end:notes[notes.length-1].t+1.6,done:false};
 }
 function pianoUI(G){
-  const s=SONGS[G.si];
-  if(G.done){hbCtl(`<button class="btn" data-h="again">다시 치기</button><button class="btn primary" data-h="close">돌아가기</button>`);return;}
-  hbMsg(`${G.concert?'🎤 대기실 연주회':'연습'} · <b>${s.name}</b> · 화면의 칸을 탭하세요 (키보드 D F J K)`);hbCtl('');
+  const s=SONGS[G.si],song=PSONGS[G.k];
+  if(G.done){hbCtl(G.concert?`<button class="btn primary" data-h="close">돌아가기</button>`
+    :`<button class="btn" data-h="again">같은 곡 다시</button><button class="btn" data-h="next">다른 곡</button><button class="btn primary" data-h="close">돌아가기</button>`);return;}
+  hbMsg(`${G.concert?'🎤 대기실 연주회':'연습'} · ${s.name} · <b>${song.name}</b> <small>(${song.by})</small><br>화면의 칸을 탭하세요 (키보드 D F J K)`);hbCtl('');
 }
 function pianoTap(G,e){const r=HB.cv.getBoundingClientRect();const lane=clamp(Math.floor((e.clientX-r.left)/r.width*4),0,3);pianoHit(G,lane);}
 function pianoHit(G,lane){
@@ -2442,12 +2466,12 @@ function pianoHit(G,lane){
   G.notes.forEach(n=>{if(n.hit===null&&n.lane===lane){const d=Math.abs(n.t-G.t);if(d<.22&&(!best||d<Math.abs(best.t-G.t)))best=n;}});
   if(!best)return;const d=Math.abs(best.t-G.t);
   if(d<.075){best.hit=100;G.judge='PERFECT';}else if(d<.15){best.hit=60;G.judge='GOOD';}else{best.hit=0;G.judge='MISS';}
-  if(best.hit){G.combo++;G.maxCombo=Math.max(G.maxCombo,G.combo);if(Snd.ctx)voice(mtof(best.m+12),Snd.ctx.currentTime,P_UNIT*best.len+.5,{type:'triangle',vol:.09,attack:.004,dest:Snd.music,filter:3600});}else G.combo=0;
+  if(best.hit){G.combo++;G.maxCombo=Math.max(G.maxCombo,G.combo);if(Snd.ctx)voice(mtof(best.m+12),Snd.ctx.currentTime,G.unit*best.len+.5,{type:'triangle',vol:.09,attack:.004,dest:Snd.music,filter:3600});}else G.combo=0;
   G.jt=.5;
 }
 function pianoStep(G,dt){
   if(!G.done){G.t+=dt;
-    G.bass.forEach(b=>{if(!b.done&&G.t>=b.t){b.done=true;if(Snd.ctx)voice(mtof(b.m),Snd.ctx.currentTime,P_UNIT*6,{type:'sine',vol:.08,attack:.01,dest:Snd.music,filter:500});}});
+    G.bass.forEach(b=>{if(!b.done&&G.t>=b.t){b.done=true;if(Snd.ctx)voice(mtof(b.m),Snd.ctx.currentTime,G.unit*6,{type:'sine',vol:.08,attack:.01,dest:Snd.music,filter:500});}});
     G.notes.forEach(n=>{if(n.hit===null&&G.t>n.t+.22){n.hit=0;G.combo=0;G.judge='MISS';G.jt=.5;}});
     if(G.t>G.end)pianoFinish(G);}
   G.jt=Math.max(0,G.jt-dt);G.flash=G.flash.map(f=>Math.max(0,f-dt));
@@ -2457,7 +2481,7 @@ function pianoFinish(G){
   G.done=true;const H=ensureHobby(),P=H.piano;const pct=Math.round(G.notes.reduce((a,n)=>a+(n.hit||0),0)/G.notes.length);
   const gr=pct>=95?'S':pct>=85?'A':pct>=70?'B':'C';G.pct=pct;G.grade=gr;const prev=P.best[G.si]||0;P.best[G.si]=Math.max(prev,pct);
   let msg=`<b>${gr}등급 · ${pct}점</b> · 최대 콤보 ${G.maxCombo}${pct>prev?' · 🏆 최고 기록!':''}`;
-  if(G.si<SONGS.length-1&&prev<SONGS[G.si+1].need&&pct>=SONGS[G.si+1].need)msg+=`<br>🔓 새 곡이 열렸어요: ${SONGS[G.si+1].name}`;
+  if(G.si<SONGS.length-1&&prev<SONGS[G.si+1].need&&pct>=SONGS[G.si+1].need)msg+=`<br>🔓 새 난이도가 열렸어요: ${SONGS[G.si+1].name}`;
   if(G.concert){P.concertDay=state.day;
     if(gr==='S'||gr==='A'){state.rating=clamp(state.rating+(gr==='S'?.05:.03),1,5);addMod(gr==='S'?3:2,5,'원장님 연주회');msg+=`<br>👏 대기실이 박수로 가득! 평점 +${gr==='S'?'0.05':'0.03'}, 5일 동안 하루 환자 +${gr==='S'?3:2}명`;sfx('level');G.toast='연주회 대성공!';}
     else msg+='<br>연주회는 무난하게 끝났어요. 다음엔 A등급 이상을 노려봐요!';
