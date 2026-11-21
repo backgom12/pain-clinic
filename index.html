@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T01:21:25.231Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T01:26:27.740Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -930,7 +930,7 @@ function endDay(){
   const interest=dailyInterest();
   const material=Math.round(T.revenue*.08);
   const opex=OPEX;
-  const bInc=tenantRent(),mInt=mortInterest();
+  const bInc=tenantRent()+extraRent(),mInt=mortInterest();
   const cost=rent+wages+interest+material+opex+mInt;
   state.money+=bInc-cost;
   if(hasTen('rad'))state.rating=clamp(state.rating+.002,1,5);
@@ -945,7 +945,7 @@ function nextDay(){
   state.day++;state.fatigue=Math.min(maxFat(),state.fatigue+40);
   ensureOffice();marketTick();state.fatigue=Math.min(maxFat(),state.fatigue+comfort()*2);if(state.office.furn.shelf)gainXp(3);
   if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진. 체력을 모두 회복했어요.');}
-  bldTick();const mk=stockTick();
+  bldTick().forEach(m=>{toast(m);log(m);});const mk=stockTick();
   mk.hit.forEach(n=>{const nm=sname(n.sid),h=n.sid!=='mkt'&&state.inv.hold[n.sid];toast(`${n.move>=0?'📈':'📉'} ${nm} ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%${h?' (보유 중!)':''}`);
     log(`<b>${nm}</b> 뉴스 결과 ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%`);});
   if(mk.div)toast(`배당금 +${won(mk.div)}`);
@@ -1364,6 +1364,9 @@ function act(a,arg){
     case'bevict':{const B=state.bld,f=+arg,t=B.ten[f];if(t){B.ten[f]=null;B.offers[f]=rollOffers(f);if(t.k==='pharm'&&!state.evtUsed.pharmacy)state.pharmacy=false;toast(`${f}층 ${TENANTS[t.k].name}이(가) 나갔어요.`);}break;}
     case'bmort':{const B=state.bld,amt=arg==='all'?B.mort:Math.min(+arg,B.mort);if(amt>0&&state.money>=amt){state.money-=amt;B.mort-=amt;toast(`담보대출 ${won(amt)} 상환`);}break;}
     case'brefi':{const B=state.bld;if(B.own&&B.mort+1e8<=B.value*MORT_LTV){B.mort+=1e8;state.money+=1e8;toast('건물 담보로 1억을 더 빌렸어요.');}break;}
+    case'xbuy':{ensureInv();const[id,how]=arg.split(':');buyExtra(+id,how==='loan');break;}
+    case'xrepay':{const e=state.bld.extra.find(x=>x.id===+arg);if(e&&state.money>=e.mort){state.money-=e.mort;toast(`${e.name} 대출 ${won(e.mort)} 상환`);e.mort=0;}break;}
+    case'xsell':{const B=state.bld,e=B.extra.find(x=>x.id===+arg);if(e){const got=Math.round(e.value*.97)-e.mort;state.money+=got;B.extra=B.extra.filter(x=>x!==e);sfx('coin');toast(`${e.name}을(를) 팔아 ${won(got)}을 받았어요.`);log(`🏙 ${e.name} 매각 (${won(got)})`);}break;}
     case'bsellask':state.bldSellAsk=true;break;
     case'bsellno':state.bldSellAsk=false;break;
     case'bsell':{const B=state.bld;if(B.own){const got=Math.round(B.value*.97)-B.mort;state.money+=got;log(`<b>${BLD_NAME}</b> 매각 (${won(got)})`);
@@ -1808,12 +1811,14 @@ function ensureInv(){
   const I=state.inv;STOCKS.forEach(x=>{if(!I.px[x.id]){I.px[x.id]=x.p0;I.hist[x.id]=[x.p0];}});
   if(!I.dep)I.dep=[];if(!I.dca)I.dca={};if(!I.rate)I.rate=.035;
   if(!state.bld)state.bld={value:25e8,floor:false,own:false,ten:{},offers:{},offerDay:0,mort:0,ownDay:0};
+  if(!state.bld.extra){state.bld.extra=[];state.bld.market=[];state.bld.mktDay=0;}
+  if(!state.bld.mktDay){state.bld.mktDay=state.day;state.bld.market=[0,1,2].map(()=>newListing());}
 }
 const tenantsOf=()=>state.bld&&state.bld.own?Object.values(state.bld.ten).filter(Boolean):[];
 const hasTen=k=>tenantsOf().some(t=>t.k===k);
 function tenantPatients(){let n=0;tenantsOf().forEach(t=>{if(t.k==='pilates')n+=2;if(t.k==='ortho')n+=3;if(t.k==='kmed')n-=1;});return n;}
 const tenantRent=()=>tenantsOf().reduce((a,t)=>a+t.rent,0);
-const mortInterest=()=>Math.round((state.bld?state.bld.mort:0)*MORT_RATE/365);
+const mortInterest=()=>state.bld?Math.round((state.bld.mort+(state.bld.extra||[]).reduce((a,e)=>a+e.mort,0))*MORT_RATE/365):0;
 const clinicRent=()=>state.bld&&(state.bld.floor||state.bld.own)?0:Math.max(0,RENT-state.rentDiscount);
 const floorPrice=()=>Math.round(state.bld.value*.2/1e6)*1e6;
 const bldPrice=(k=1)=>Math.round(state.bld.value*(state.bld.floor?.8:1)*k/1e6)*1e6;
@@ -1883,6 +1888,39 @@ function bldTick(){
   ensureInv();const B=state.bld;
   B.value=Math.round(B.value*Math.exp((Math.random()+Math.random()-1)*.012+.0006));
   if(B.own&&state.day-B.offerDay>=7){B.offerDay=state.day;FLOORS.forEach(f=>{if(!B.ten[f])B.offers[f]=rollOffers(f);});}
+  /* 투자용 건물: 시세·공실·개발 호재 */
+  const out=[];
+  B.extra.forEach(e=>{const T=EXTRA_T[e.k];e.value=Math.round(e.value*Math.exp((Math.random()+Math.random()-1)*T.vol+T.g));
+    if(e.vacUntil&&state.day>=e.vacUntil){e.vacUntil=0;e.occ=1;}
+    if(!e.vacUntil&&Math.random()<(T.vac||.006)){e.vacUntil=state.day+RI(5,10);e.occ=.5;out.push(`${e.name}에 공실이 생겼어요 (임대 수입 절반)`);}
+    if(e.dev&&state.day>=e.dev.due){if(e.dev.real){e.value=Math.round(e.value*1.35);out.push(`🏗 ${e.name} 개발 호재 확정! 시세 +35%`);}else out.push(`${e.name} 개발 소문은 헛소문이었어요`);e.dev=null;}});
+  B.market.forEach(m=>{const T=EXTRA_T[m.k];m.value=Math.round(m.value*Math.exp((Math.random()+Math.random()-1)*T.vol+T.g));
+    if(m.dev&&state.day>=m.dev.due){if(m.dev.real)m.value=Math.round(m.value*1.35);m.dev=null;}});
+  B.market=B.market.filter(m=>!m.until||state.day<=m.until);
+  if(!B.mktDay||state.day-B.mktDay>=14||!B.market.filter(m=>!m.until).length){B.mktDay=state.day;B.market=B.market.filter(m=>m.until).concat([0,1,2].map(()=>newListing()));}
+  return out;
+}
+/* ---------- 투자용 건물 (우리 병원 건물 말고 추가로 사는 건물) ---------- */
+const EXTRA_T={
+ station:{name:'역세권 꼬마빌딩',v:30e8,y:.045,g:.0008,vol:.012,desc:'유동 인구가 많아 공실이 적고 꾸준히 올라요.'},
+ univ:{name:'대학가 원룸 건물',v:18e8,y:.065,g:.0003,vol:.01,vac:.02,desc:'수익률이 높지만 방학 때 공실이 자주 생겨요.'},
+ newtown:{name:'신도시 상가 건물',v:45e8,y:.05,g:.001,vol:.02,desc:'도시가 커지면 크게 오르지만 출렁임도 커요.'},
+ medical:{name:'대형 메디컬빌딩',v:120e8,y:.035,g:.0012,vol:.009,desc:'병원·약국만 입점한 가장 안정적인 건물.'},
+ logis:{name:'외곽 물류창고',v:25e8,y:.07,g:0,vol:.008,desc:'임대 수입은 최고지만 값은 잘 안 올라요.'}
+};
+const DONG=['서초동','역삼동','연남동','송도동','광교동','판교동','해운대동','수성동','둔산동','상무동','성수동','마곡동'];
+function newListing(k,special){
+  k=k||pick(Object.keys(EXTRA_T));const T=EXTRA_T[k];const value=Math.round(T.v*R(.85,1.15)/1e7)*1e7;
+  return{id:state.uid++,k,name:`${pick(DONG)} ${T.name}`,value,disc:special?.8:R(.97,1.06),until:special?state.day+3:0,dev:null,tip:false};
+}
+const listPrice=m=>Math.round(m.value*m.disc/1e7)*1e7;
+const extraRent=()=>state.bld?(state.bld.extra||[]).reduce((a,e)=>a+Math.round(e.value*EXTRA_T[e.k].y/365*e.occ),0):0;
+function buyExtra(id,loan){
+  const B=state.bld,m=B.market.find(x=>x.id===id);if(!m)return;const p=listPrice(m),down=loan?Math.round(p*(1-MORT_LTV)):p;
+  if(state.money<down)return;state.money-=down;
+  B.extra.push({id:m.id,k:m.k,name:m.name,value:m.value,paid:p,mort:loan?p-down:0,occ:1,vacUntil:0,day:state.day,dev:m.dev});
+  B.market=B.market.filter(x=>x.id!==id);sfx('level');toast(`${m.name} 매입! 건물 ${B.extra.length+(B.own?1:0)}채의 건물주가 됐어요.`);
+  log(`🏙 <b>${m.name}</b> 매입 (${won(p)}${loan?`, 담보대출 ${won(p-down)}`:''})`);
 }
 function buyStock(id,amt){
   ensureInv();const I=state.inv;amt=Math.min(amt,state.money);if(amt<1e4)return;
@@ -1961,7 +1999,20 @@ function renderInvest(){
       acts+=`<div class="item"><h3>건물 매각</h3><p>시세의 97%를 받고 대출을 갚아요. 다시 3층을 빌려 쓰게 돼요.</p><span class="price">손에 쥐는 돈 ${won(sellGet)}</span>
         ${s.bldSellAsk?`<div class="ctl"><button class="btn sm" data-act="bsellno">취소</button><button class="btn sm danger" data-act="bsell">정말 팔기</button></div>`:`<button class="btn sm danger" data-act="bsellask">매각하기</button>`}</div>`;
     }
-    body=st+`<div class="shop">${acts}</div><p class="hint">건물 시세는 매일 조금씩 움직이고, 개발 호재 같은 이벤트로 크게 뛰기도 해요. 신용이 낮은 세입자는 임대료를 더 내지만 연체할 수 있어요.</p>`;
+    /* 투자용 건물 */
+    const ex=B.extra.map(e=>{const T=EXTRA_T[e.k],inc=Math.round(e.value*T.y/365*e.occ),gain=e.value-e.paid,net=Math.round(e.value*.97)-e.mort;
+      return`<div class="item"><h3>🏙 ${e.name}</h3><p>${T.desc}${e.vacUntil?'<br><span class="neg">공실 중 (임대 수입 절반)</span>':''}${e.dev?'<br>🏗 개발 호재 소문이 있어요':''}</p>
+        <span class="price">시세 ${won(e.value)} <span class="${gain>=0?'up':'neg'}">(${gain>=0?'+':''}${won(gain)})</span><br>하루 임대 수입 +${won(inc)}${e.mort?` · 대출 ${won(e.mort)}`:''}</span>
+        <div class="ctl">${e.mort?`<button class="btn sm" data-act="xrepay" data-arg="${e.id}" ${s.money<e.mort?'disabled':''}>대출 전액 상환</button>`:''}
+        <button class="btn sm danger" data-act="xsell" data-arg="${e.id}">매각 (${won(net)} 받기)</button></div></div>`;}).join('');
+    const mk=B.market.map(m=>{const T=EXTRA_T[m.k],p=listPrice(m),dn=Math.round(p*(1-MORT_LTV));
+      return`<div class="item"><h3>${m.until?'🔥 급매 · ':''}${m.name}</h3><p>${T.desc}<br>연 수익률 약 ${(T.y*100).toFixed(1)}% · 하루 임대 수입 약 ${won(m.value*T.y/365)}${m.tip?'<br>🏗 <b>중개인 귀띔: 개발 호재가 있대요</b>':''}${m.until?`<br><span class="neg">급매는 D-${Math.max(0,m.until-s.day)}까지</span>`:''}</p>
+        <span class="price">매매가 ${won(p)}${m.disc<1?` <span class="up">(시세 ${won(m.value)}의 ${Math.round(m.disc*100)}%)</span>`:''}</span>
+        <div class="ctl"><button class="btn sm primary" data-act="xbuy" data-arg="${m.id}:loan" ${s.money<dn?'disabled':''}>대출 끼고 (계약금 ${won(dn)})</button><button class="btn sm" data-act="xbuy" data-arg="${m.id}:cash" ${s.money<p?'disabled':''}>현금으로</button></div></div>`;}).join('');
+    body=st+`<div class="shop">${acts}</div><p class="hint">건물 시세는 매일 조금씩 움직이고, 개발 호재 같은 이벤트로 크게 뛰기도 해요. 신용이 낮은 세입자는 임대료를 더 내지만 연체할 수 있어요.</p>
+      <h3 class="tx-h">🏙 투자용 건물 ${B.extra.length?`· ${B.extra.length}채 보유 · 하루 임대 수입 +${won(extraRent())}`:''}</h3>
+      ${ex?`<div class="shop">${ex}</div>`:''}
+      <h3 class="tx-h">부동산 매물 <small class="nst">(2주마다 새 매물 · 골프에서 중개인과 친해지면 급매·개발 정보)</small></h3><div class="shop">${mk}</div>`;
   }
   return`<h2>재테크</h2><p class="lead">운영 자금 <b class="${s.money<0?'neg':''}">${won(s.money)}</b></p><div class="tabs">${tabs}</div>${body}
     <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`;
@@ -2086,13 +2137,14 @@ function drawOffice(cv,dt){
    일반 모달과 달리 매 프레임 그려야 해서 #app 밖에 따로 띄워요 (render()가 지우지 않도록). */
 const GOLF_FEE=5e5,CASTS_PER_DAY=5,CONCERT_GAP=7;
 const FISH=[
- {id:'crucian',name:'붕어',g:'c',w:[.2,1.2],p:15000,str:.8,col:'#8a7a4a'},
- {id:'carp',name:'잉어',g:'c',w:[1,6],p:12000,str:1,col:'#a8863a'},
- {id:'catfish',name:'메기',g:'c',w:[.8,5],p:15000,str:1.1,col:'#4a4a3a'},
- {id:'bass',name:'배스',g:'r',w:[.5,3.5],p:20000,str:1.25,col:'#5a7a3a'},
- {id:'mandarin',name:'쏘가리',g:'r',w:[.4,2.5],p:60000,str:1.35,col:'#b89a4a'},
- {id:'snakehead',name:'가물치',g:'r',w:[1.5,8],p:25000,str:1.5,col:'#3a4a2a'},
- {id:'goldcarp',name:'황금 잉어',g:'m',w:[3,12],p:150000,str:1.75,col:'#f2c12e'},
+ /* p: kg당 판매가. 잡기 어려운 만큼 보상을 크게 (붕어 수십만 원 ~ 황금 잉어 수천만~억 원) */
+ {id:'crucian',name:'붕어',g:'c',w:[.2,1.2],p:4e5,str:.8,col:'#8a7a4a'},
+ {id:'carp',name:'잉어',g:'c',w:[1,6],p:2e5,str:1,col:'#a8863a'},
+ {id:'catfish',name:'메기',g:'c',w:[.8,5],p:25e4,str:1.1,col:'#4a4a3a'},
+ {id:'bass',name:'배스',g:'r',w:[.5,3.5],p:8e5,str:1.25,col:'#5a7a3a'},
+ {id:'mandarin',name:'쏘가리',g:'r',w:[.4,2.5],p:25e5,str:1.35,col:'#b89a4a'},
+ {id:'snakehead',name:'가물치',g:'r',w:[1.5,8],p:6e5,str:1.5,col:'#3a4a2a'},
+ {id:'goldcarp',name:'황금 잉어',g:'m',w:[3,12],p:4e6,str:1.75,col:'#f2c12e'},
  {id:'boot',name:'헌 장화',g:'j',w:[.6,.6],p:0,str:.5,col:'#5a3a22'}
 ];
 const FISH_W={c:30,r:10,m:2.5,j:7};
@@ -2120,7 +2172,7 @@ function renderHobbyMenu(){
     <div class="item"><h3>⛳ 골프</h3><p>3홀 라운딩. 파워와 정확도를 타이밍 맞춰 멈추고, 바람을 읽어 클럽을 골라요. 동반자와 친해지면(점수가 좋을수록) 쓸모 있는 정보를 줘요.</p>
       <span class="price">그린피 ${won(GOLF_FEE)} · 하루 1라운드${golfed?' · 오늘은 쳤어요':''}</span>
       <button class="btn sm primary" data-act="hplay" data-arg="golf" ${golfed||s.money<GOLF_FEE?'disabled':''}>라운딩 나가기</button></div>
-    <div class="item"><h3>🎣 낚시</h3><p>찌가 쑥 들어가면 바로 챔질! 누르고 있으면 감기고, 장력이 너무 세지면 줄이 끊어져요. 잡은 고기는 횟집에 팔아요.</p>
+    <div class="item"><h3>🎣 낚시</h3><p>찌가 쑥 들어가면 바로 챔질! 누르고 있으면 감기고, 장력이 너무 세지면 줄이 끊어져요. 잡은 고기는 횟집에 비싸게 팔려요 (붕어 수십만 원 · 쏘가리 수백만 원 · 황금 잉어는 억 단위). 처음 잡는 고기는 2배, 대물은 1.5배!</p>
       <span class="price">오늘 남은 캐스팅 ${cl}/${CASTS_PER_DAY} · 도감 ${caught}/${total}</span>
       <div class="fishdex">${FISH.filter(f=>f.g!=='j').map(f=>`<span class="${H.fish[f.id]?'on':''} g-${f.g}">${H.fish[f.id]?`${f.name} ${H.fish[f.id].toFixed(1)}kg`:'???'}</span>`).join('')}</div>
       <button class="btn sm primary" data-act="hplay" data-arg="fish" ${cl<=0?'disabled':''}>낚시하러 가기</button></div>
@@ -2247,6 +2299,11 @@ function golfFinish(G){
         B.offers[f]=[{k,rent:Math.round(TENANTS[k].rent*1.15/1e4)*1e4,cred:3},...(B.offers[f]||[])].slice(0,3);
         msg=`"${f}층에 들어올 우량 세입자를 소개해 드릴게요." <br><small>(${TENANTS[k].name} · 신용 ★★★ · 재테크 → 건물에서 확인)</small>`;}
       else{B.value=Math.round(B.value*(1+.01*q));msg=`"이 동네 시세가 꽤 오르고 있어요." <br><small>(건물 시세 +${q}%)</small>`;}}
+    /* 투자용 건물 정보: 친해지면 급매, 아주 친하면 개발 호재까지 */
+    if(q>=2){const m=newListing(null,true);
+      if(q===3){m.tip=true;m.dev={due:state.day+RI(5,10),real:Math.random()<.85};}
+      B.market.unshift(m);
+      msg+=`<br>"그리고 ${m.name}이(가) 시세의 80%에 급매로 나왔어요.${q===3?' 여기 근처에 개발 계획도 있다던데… 이건 비밀이에요.':''}" <br><small>(재테크 → 건물 → 부동산 매물 · 3일 안에 사야 해요)</small>`;}
   }else{addMod(q+1,5,'골프 인맥');msg=`"시술 필요한 환자는 원장님께 보낼게요!" <br><small>(5일 동안 하루 환자 +${q+1}명)</small>`;}
   G.phase='done';G.toast=`골프 ${tot}타 (${df>=0?'+':''}${df}) · ${M.name}와(과) 라운딩`;
   G.note=`<b>라운딩 끝! ${tot}타 (파 ${par}, ${df>=0?'+':''}${df})</b><br>${M.name}: ${msg}`;
@@ -2312,8 +2369,10 @@ function fishEnd(G,ok,why){
   const H=ensureHobby(),f=G.fish;G.hold=false;
   if(ok){const w=f.g==='j'?.6:Math.round((f.w[0]+(f.w[1]-f.w[0])*Math.pow(Math.random(),1.6))*10)/10;
     if(f.g==='j'){G.res='헌 장화를 낚았어요… 😅';}
-    else{const first=!H.fish[f.id],rec=!first&&w>H.fish[f.id];H.fish[f.id]=Math.max(H.fish[f.id]||0,w);const pay=Math.round(w*f.p/1e3)*1e3;state.money+=pay;
-      G.res=`<b>${f.name} ${w}kg</b>${first?' · 🆕 도감 등록!':rec?' · 🏆 최고 기록!':''} · 횟집에 ${won(pay)}에 팔았어요.`;sfx(f.g==='m'?'level':'coin');
+    else{const first=!H.fish[f.id],rec=!first&&w>H.fish[f.id];H.fish[f.id]=Math.max(H.fish[f.id]||0,w);
+      const big=w>=f.w[0]+(f.w[1]-f.w[0])*.8; /* 대물(상위 20% 무게)은 1.5배 */
+      const pay=Math.round(w*f.p*(big?1.5:1)*(first?2:1)/1e4)*1e4;state.money+=pay;
+      G.res=`<b>${f.name} ${w}kg</b>${big?' · 🐋 대물!':''}${first?' · 🆕 도감 등록 (첫 손맛 2배)':rec?' · 🏆 최고 기록!':''}<br>횟집에 <b>${won(pay)}</b>에 팔았어요.`;sfx(f.g==='m'||big?'level':'coin');
       log(`🎣 ${f.name} ${w}kg`);
       if(!H.fishDone&&FISH.every(x=>x.g==='j'||H.fish[x.id])){H.fishDone=true;state.rating=clamp(state.rating+.05,1,5);G.res+='<br>🎉 <b>도감 완성!</b> "강태공 원장님" 소문이 나서 평점 +0.05';}}
   }else{G.res=why;sfx('bad');}
