@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T02:23:00.160Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T02:49:31.531Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -2136,17 +2136,41 @@ function drawOffice(cv,dt){
 /* ---------- 취미 미니게임: 골프 · 낚시 · 피아노 ----------
    일반 모달과 달리 매 프레임 그려야 해서 #app 밖에 따로 띄워요 (render()가 지우지 않도록). */
 const GOLF_FEE=5e5,CASTS_PER_DAY=5,CONCERT_GAP=7;
-const FISH=[
- /* p: kg당 판매가. 잡기 어려운 만큼 보상을 크게 (붕어 수십만 원 ~ 황금 잉어 수천만~억 원) */
- {id:'crucian',name:'붕어',g:'c',w:[.2,1.2],p:4e5,str:.8,col:'#8a7a4a'},
- {id:'carp',name:'잉어',g:'c',w:[1,6],p:2e5,str:1,col:'#a8863a'},
- {id:'catfish',name:'메기',g:'c',w:[.8,5],p:25e4,str:1.1,col:'#4a4a3a'},
- {id:'bass',name:'배스',g:'r',w:[.5,3.5],p:8e5,str:1.25,col:'#5a7a3a'},
- {id:'mandarin',name:'쏘가리',g:'r',w:[.4,2.5],p:25e5,str:1.35,col:'#b89a4a'},
- {id:'snakehead',name:'가물치',g:'r',w:[1.5,8],p:6e5,str:1.5,col:'#3a4a2a'},
- {id:'goldcarp',name:'황금 잉어',g:'m',w:[3,12],p:4e6,str:1.75,col:'#f2c12e'},
- {id:'boot',name:'헌 장화',g:'j',w:[.6,.6],p:0,str:.5,col:'#5a3a22'}
+/* 낚시터: 도감을 다 채우면 다음 낚시터로 (저수지 → 계곡 → 바다 → 다시 저수지, 바퀴마다 판매가 +50%) */
+const FISH_SPOTS=[
+ {name:'저수지',sky:['#f2b98a','#f6dcb4'],hill:'#6f8a5a',water:['#4f8fa8','#1f4a64']},
+ {name:'계곡',sky:['#9fd0f0','#e6f4fb'],hill:'#4f7a46',water:['#5fb3b0','#1f5a5a']},
+ {name:'바다',sky:['#7fb8e8','#cfe8fa'],hill:'#8a9aa8',water:['#2f6fb0','#0f2f5a']}
 ];
+const FISH=[
+ /* p: kg당 판매가. 잡기 어려운 만큼 보상을 크게. rg: 낚시터 (-1은 어디서나) */
+ {id:'crucian',rg:0,name:'붕어',g:'c',w:[.2,1.2],p:4e5,str:.8,col:'#8a7a4a',L:12},
+ {id:'carp',rg:0,name:'잉어',g:'c',w:[1,6],p:2e5,str:1,col:'#a8863a'},
+ {id:'catfish',rg:0,name:'메기',g:'c',w:[.8,5],p:25e4,str:1.1,col:'#4a4a3a',L:16},
+ {id:'bass',rg:0,name:'배스',g:'r',w:[.5,3.5],p:8e5,str:1.25,col:'#5a7a3a'},
+ {id:'mandarin',rg:0,name:'쏘가리',g:'r',w:[.4,2.5],p:25e5,str:1.35,col:'#b89a4a'},
+ {id:'snakehead',rg:0,name:'가물치',g:'r',w:[1.5,8],p:6e5,str:1.5,col:'#3a4a2a',L:20},
+ {id:'goldcarp',rg:0,name:'황금 잉어',g:'m',w:[3,12],p:4e6,str:1.75,col:'#f2c12e'},
+ {id:'minnow',rg:1,name:'피라미',g:'c',w:[.05,.25],p:4e6,str:.8,col:'#8aa8b8',L:11},
+ {id:'chub',rg:1,name:'갈겨니',g:'c',w:[.05,.3],p:35e5,str:.9,col:'#7a98a0',L:11},
+ {id:'perch',rg:1,name:'꺽지',g:'c',w:[.1,.5],p:2e6,str:1,col:'#6a6a3a',L:12},
+ {id:'trout',rg:1,name:'송어',g:'r',w:[.5,3],p:12e5,str:1.25,col:'#9a8aa8'},
+ {id:'kkeuri',rg:1,name:'끄리',g:'r',w:[.3,1.5],p:2e6,str:1.35,col:'#8aa0b0'},
+ {id:'lenok',rg:1,name:'열목어',g:'r',w:[.5,3],p:2e6,str:1.5,col:'#a87a5a'},
+ {id:'sturgeon',rg:1,name:'철갑상어',g:'m',w:[5,30],p:3e6,str:1.8,col:'#8a9aa8',L:22},
+ {id:'mackerel',rg:2,name:'고등어',g:'c',w:[.2,1],p:15e5,str:.9,col:'#3a6a8a'},
+ {id:'rockfish',rg:2,name:'우럭',g:'c',w:[.3,2],p:8e5,str:1,col:'#4a4a4a',L:12},
+ {id:'flounder',rg:2,name:'광어',g:'c',w:[.5,3],p:6e5,str:1.05,col:'#8a7a5a'},
+ {id:'seabass',rg:2,name:'농어',g:'r',w:[1,6],p:8e5,str:1.3,col:'#9aa8b0',L:16},
+ {id:'redbream',rg:2,name:'참돔',g:'r',w:[.5,4],p:15e5,str:1.35,col:'#e07a7a'},
+ {id:'blackbream',rg:2,name:'감성돔',g:'r',w:[.4,2.5],p:25e5,str:1.5,col:'#5a6a7a'},
+ {id:'tuna',rg:2,name:'참다랑어',g:'m',w:[30,150],p:5e5,str:1.85,col:'#2f4f8a',L:22},
+ {id:'boot',rg:-1,name:'헌 장화',g:'j',w:[.6,.6],p:0,str:.5,col:'#5a3a22'}
+];
+const fishSpot=()=>{const H=ensureHobby();return H.rg||0;};
+const spotFish=()=>FISH.filter(f=>f.rg===fishSpot()||f.rg===-1);
+const dexFish=()=>FISH.filter(f=>f.rg===fishSpot());
+const fishMult=()=>1+.5*(ensureHobby().lap||0);
 /* 입질 확률: 흔한 고기 3종 각 약 22% · 희귀 3종 각 약 7.5% · 황금 잉어 5% · 장화 약 5% */
 const FISH_W={c:30,r:10,m:6.7,j:7};
 const CLUBS=[['dr','드라이버',250],['wd','우드',210],['ir','아이언',160],['wg','웨지',100]];
@@ -2185,7 +2209,7 @@ const songOpen=i=>i===0||((ensureHobby().piano.best[i-1]||0)>=SONGS[i].need);
 const hasPiano=()=>!!(state.office&&state.office.furn&&state.office.furn.piano);
 function renderHobbyMenu(){
   const s=state,H=ensureHobby(),P=H.piano,golfed=H.golfDay===s.day,cl=castsLeft();
-  const caught=FISH.filter(f=>f.g!=='j'&&H.fish[f.id]).length,total=FISH.filter(f=>f.g!=='j').length;
+  const caught=dexFish().filter(f=>H.fish[f.id]).length,total=dexFish().length,spot=FISH_SPOTS[fishSpot()];
   const cd=CONCERT_GAP-(s.day-P.concertDay);
   return`<h2>🎯 취미</h2><p class="lead">진료만 하면 지치죠. 취미로 인맥도 쌓고, 도감도 모으고, 연주회도 열어보세요.</p>
    <div class="shop">
@@ -2194,7 +2218,8 @@ function renderHobbyMenu(){
       <button class="btn sm primary" data-act="hplay" data-arg="golf" ${golfed||s.money<GOLF_FEE?'disabled':''}>라운딩 나가기</button></div>
     <div class="item"><h3>🎣 낚시</h3><p>찌가 쑥 들어가면 바로 챔질! 누르고 있으면 감기고, 장력이 너무 세지면 줄이 끊어져요. 잡은 고기는 횟집에 비싸게 팔려요 (붕어 수십만 원 · 쏘가리 수백만 원 · 황금 잉어는 억 단위). 처음 잡는 고기는 2배, 대물은 1.5배!</p>
       <span class="price">오늘 남은 캐스팅 ${cl}/${CASTS_PER_DAY} · 도감 ${caught}/${total}</span>
-      <div class="fishdex">${FISH.filter(f=>f.g!=='j').map(f=>`<span class="${H.fish[f.id]?'on':''} g-${f.g}">${H.fish[f.id]?`${f.name} ${H.fish[f.id].toFixed(1)}kg`:'???'}</span>`).join('')}</div>
+      <span class="price">📍 ${spot.name} 도감${H.clears?` · 완성 ${H.clears}회`:''}${fishMult()>1?` · 판매가 ×${fishMult()}`:''} — 다 채우면 보너스와 새 낚시터!</span>
+      <div class="fishdex">${dexFish().map(f=>`<span class="${H.fish[f.id]?'on':''} g-${f.g}">${H.fish[f.id]?`${f.name} ${H.fish[f.id].toFixed(1)}kg`:'???'}</span>`).join('')}</div>
       <button class="btn sm primary" data-act="hplay" data-arg="fish" ${cl<=0?'disabled':''}>낚시하러 가기</button></div>
     <div class="item"><h3>🎹 피아노</h3>${hasPiano()?`<p>떨어지는 음표를 타이밍 맞춰 눌러요. 난이도를 고르면 ${PSONGS.length}곡 중 하나가 랜덤으로 나와요 (엘리제를 위하여, 터키 행진곡, 캐논…). 70점을 넘기면 다음 난이도가 열려요. 연주회는 열린 난이도 중 가장 어려운 걸로 치고, A등급 이상이면 평점이 오르고 환자가 늘어요.</p>
       <div class="ctl">${SONGS.map((g,i)=>`<button class="btn sm" data-act="hplay" data-arg="piano:${i}" ${songOpen(i)?'':'disabled'}>${songOpen(i)?'':'🔒 '}${g.name}${P.best[i]?` · ${P.best[i]}점`:''}</button>`).join('')}</div>
@@ -2225,7 +2250,7 @@ function hobbyClose(){
   if(HB.el)HB.el.remove();HB.el=null;HB.g=null;HB.kind=null;
   state.modal={type:'hobby'};save();render();if(G&&G.toast)toast(G.toast);
 }
-function hbLoop(ts){if(!HB.el)return;const dt=Math.min(.05,(ts-HB.last)/1000);HB.last=ts;const G=HB.g;
+function hbLoop(ts){if(!HB.el)return;const dt=Math.min(.05,(ts-HB.last)/1000);HB.last=ts;HB.dt=dt;const G=HB.g;
   if(HB.kind==='golf')golfStep(G,dt);else if(HB.kind==='fish')fishStep(G,dt);else pianoStep(G,dt);
   HB.raf=requestAnimationFrame(hbLoop);}
 const hbMsg=t=>{const m=document.getElementById('hb-msg');if(m)m.innerHTML=t;};
@@ -2269,7 +2294,7 @@ function golfTap(G){
   if(G.phase==='power'){G.p=golfPow(G.t);G.t=0;G.phase='acc';G.note='가운데 초록 칸에 가까울수록 정확해요!';golfUI(G);return;}
   if(G.phase==='acc'){G.a=Math.sin(G.t*5.2);golfShot(G);golfUI(G);return;}
   if(G.phase==='putt'){G.p=golfPow(G.t*.8);golfPutt(G);golfUI(G);return;}
-  if(G.phase==='holed'){if(G.h<G.holes.length-1){G.h++;G.x=0;G.strokes=0;G.lie='tee';G.wind=RI(-8,8);G.phase='aim';golfAutoClub(G);G.note=`${G.h+1}번 홀 · 파 ${G.holes[G.h].par} · ${G.holes[G.h].d}m`;}else golfFinish(G);golfUI(G);}
+  if(G.phase==='holed'){if(G.cele&&G.cele.t<.8)return;G.cele=null;if(G.h<G.holes.length-1){G.h++;G.x=0;G.strokes=0;G.lie='tee';G.wind=RI(-8,8);G.phase='aim';golfAutoClub(G);G.note=`${G.h+1}번 홀 · 파 ${G.holes[G.h].par} · ${G.holes[G.h].d}m`;}else golfFinish(G);golfUI(G);}
 }
 const golfPow=t=>1-Math.abs((t*1.1)%2-1);
 function golfShot(G){
@@ -2299,6 +2324,13 @@ function golfAfterFly(G){
     const sc=left<.01?G.strokes:hole.par+4;G.scores.push(sc);const df=sc-hole.par;
     G.note+=` <b>${G.h+1}번 홀 ${sc}타 · ${df===0?'파':df<0?(df===-1?'버디!':df===-2?'이글!!':'앨버트로스?!'):df===1?'보기':df===2?'더블 보기':'+'+df}</b>`;
     G.phase='holed';if(df<0)sfx('level');
+    const hio=sc===1&&left<.01;
+    G.cele=hio?celeStart(3,'🏆 홀인원!!! 🏆','한 번에 들어갔어요!','#ffd54a')
+      :df<=-2?celeStart(3,df===-2?'🦅 이글!!':'앨버트로스?!',`${sc}타 · 파 ${hole.par}`,'#ffd54a')
+      :df===-1?celeStart(2,'🐦 버디!',`${sc}타 · 파 ${hole.par}`,'#9fd8ff')
+      :df===0?celeStart(1,'파!',`${sc}타 · 깔끔해요`,'#ffffff')
+      :celeStart(0,df===1?'보기':df===2?'더블 보기':`+${df}`,`${sc}타 · 파 ${hole.par}`,'#c8c8c8');
+    if(df===0)sfx('coin');
   }else G.phase='aim';
   if(G.phase==='aim'&&G.lie!=='green')golfAutoClub(G);
   golfUI(G);
@@ -2367,18 +2399,61 @@ function golfDraw(G){
     cvText(c,'정확도',16,352,{size:12});c.fillStyle='#22332a';c.fillRect(16,358,328,18);c.fillStyle='#4caf50';c.fillRect(180-30,358,60,18);c.fillStyle='#e0b23a';c.fillRect(180-100,358,40,18);c.fillRect(180+60,358,40,18);
     const av=G.phase==='acc'?Math.sin(G.t*5.2):G.phase==='power'||G.phase==='aim'?0:G.a;c.fillStyle='#fff';c.fillRect(180+av*164-2,354,4,26);
   }
+  if(G.cele){if(G.cele.tier>=1){c.fillStyle=`rgba(0,0,0,${Math.min(.35,G.cele.t)})`;c.fillRect(0,0,W,Hh);}celeDraw(c,G.cele,HB.dt||.016,180);}
 }
 
 /* ===== 낚시 ===== */
 function fishNew(){return{phase:'ready',t:0,wait:0,win:0,fish:null,prog:.3,ten:.2,hold:false,nextSurge:1,res:'',twitch:0};}
+/* ---------- 축하 연출 (낚시·골프 공용): 번쩍임 + 빛줄기 + 꽃가루 + 큰 글씨 ---------- */
+function celeStart(tier,title,sub,col){
+  const n=tier>=3?90:tier===2?55:tier===1?25:0,cols=tier>=3?['#ffd54a','#ff6b6b','#6fd88a','#6fb7d8','#c58af0','#fff']:['#ffd54a','#fff','#6fd88a'];
+  const parts=Array.from({length:n},()=>({x:180+R(-30,30),y:170,vx:R(-160,160),vy:R(-320,-120),col:pick(cols),r:R(0,6),s:R(3,6)}));
+  if(tier>=2){sfx('fanfare');try{navigator.vibrate&&navigator.vibrate(tier>=3?[80,60,80,60,200]:[60,40,120]);}catch(e){}}
+  return{t:0,tier,title,sub,col:col||'#ffd54a',parts};
+}
+function celeDraw(c,C,dt,cy=170){
+  if(!C)return;C.t+=dt;const t=C.t,W=360;
+  if(t<.18&&C.tier>=1){c.fillStyle=`rgba(255,255,255,${(.18-t)/.18*.8})`;c.fillRect(0,0,W,400);}
+  if(C.tier>=2){c.save();c.translate(180,cy);c.rotate(t*.6);const rays=C.tier>=3?16:10;
+    for(let i=0;i<rays;i++){c.rotate(Math.PI*2/rays);c.fillStyle=C.tier>=3?`hsla(${(i*360/rays+t*120)%360},90%,65%,.28)`:'rgba(255,230,120,.25)';c.beginPath();c.moveTo(0,0);c.lineTo(260,-22);c.lineTo(260,22);c.closePath();c.fill();}c.restore();}
+  C.parts.forEach(p=>{p.vy+=420*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=dt*8;c.save();c.translate(p.x,p.y);c.rotate(p.r);c.fillStyle=p.col;c.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);c.restore();});
+  const k=Math.min(1,t/.25),sc=t<.25?.4+k*.8:1.2-Math.min(.2,(t-.25)*.8);
+  c.save();c.translate(180,cy-(C.tier>=1?70:40));c.scale(sc,sc);
+  cvText(c,C.title,0,0,{size:C.tier>=3?34:C.tier>=2?30:24,col:C.col,align:'center',bold:true});c.restore();
+  if(C.sub&&t>.2)cvText(c,C.sub,180,cy-(C.tier>=1?40:16),{size:14,align:'center',bold:true});
+}
+/* 도트 물고기 (종마다 몸 길이·무늬가 달라요) */
+function shade(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const f=v=>clamp(Math.round(k>0?v+(255-v)*k:v*(1+k)),0,255);return`rgb(${f(r)},${f(g)},${f(b)})`;}
+function drawFishSprite(c,f,cx,cy,s,t){
+  const px=(x,y,col)=>{c.fillStyle=col;c.fillRect(Math.round(cx+x*s),Math.round(cy+y*s),Math.ceil(s),Math.ceil(s));};
+  if(f.id==='boot'){const B=['..####..','..#..#..','..#..#..','..#..#..','..#..###','.#######','########'];B.forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch==='#')px(x-4,y-3.5,y>=5?'#3a2414':'#5a3a22');}));return;}
+  const L=f.L||14,Hh=f.id==='crucian'||f.id==='redbream'||f.id==='blackbream'?8:f.id==='flounder'?9:(L>=20?6:7),bl=L-4,mid=(Hh-1)/2;
+  const legend=f.g==='m',gold=f.id==='goldcarp';
+  const body=gold?`hsl(${45+Math.sin(t*6)*8},95%,${55+Math.sin(t*9)*8}%)`:f.col,dark=gold?'#b8860b':shade(f.col,-.35),belly=gold?'#fff3b0':shade(f.col,.45);
+  for(let x=0;x<L;x++)for(let y=0;y<Hh;y++){
+    const ex=(x-bl/2)/(bl/2),ey=(y-mid)/(Hh/2);
+    if(x<bl&&ex*ex+ey*ey<=1){let col=y>=mid+1?belly:y<=1?dark:body;
+      if(f.id==='bass'&&y===Math.round(mid)&&x>2)col=dark;
+      if(f.id==='mandarin'&&(x*3+y*5)%7===0)col=dark;
+      if(f.id==='snakehead'&&(x+y)%4===0&&y<mid+1)col=dark;
+      if((f.id==='mackerel'||f.id==='trout')&&y<mid&&(x+y*2)%3===0)col=dark;
+      if(f.id==='redbream'&&(x*5+y)%9===0)col='#7fd8ff';
+      if(legend&&(x*7+y*3+Math.floor(t*10))%11===0)col='#fff';
+      px(x-L/2,y-Hh/2,col);}
+    else if(x>=bl&&Math.abs(y-mid)<=(x-bl)*1.1+.6)px(x-L/2,y-Hh/2,dark);
+  }
+  for(let x=Math.floor(bl*.35);x<bl*.65;x++)px(x-L/2,-Hh/2-1,dark);
+  px(2-L/2,mid-1-Hh/2,'#fff');px(2-L/2,mid-1-Hh/2+.5,'#111');
+  if(f.id==='catfish'){px(-L/2-1,mid-Hh/2,dark);px(-L/2-2,mid+1-Hh/2,dark);px(-L/2-1,mid-1-Hh/2,dark);px(-L/2-2,mid-2-Hh/2,dark);}
+}
 function fishUI(G){
   const cl=castsLeft();
   if(G.phase==='ready'){hbMsg(G.res||'저수지에 도착했어요. 찌를 던져볼까요?');hbCtl(cl>0?`<button class="btn primary" data-h="cast">찌 던지기 (남은 ${cl}번)</button>`:`<span class="hint">오늘 캐스팅을 다 썼어요. 내일 또 와요!</span>`);}
   else if(G.phase==='wait')hbMsg('찌를 지켜보세요… 쑥 들어가면 바로 화면을 탭!'),hbCtl(`<button class="btn" data-hold="1">챔질 (화면 탭)</button>`);
   else if(G.phase==='fight')hbMsg('누르고 있으면 감겨요. 장력이 빨간색에 닿기 전에 손을 떼세요!'),hbCtl(`<button class="btn primary hold-btn" data-hold="1">꾹 눌러서 감기</button>`);
 }
-function fishCast(G){if(G.phase!=='ready'||castsLeft()<=0)return;ensureHobby().casts.n++;G.phase='wait';G.t=0;G.wait=R(1.8,5.5);G.twitch=0;sfx('click');fishUI(G);save();}
-function fishPick(){let tot=FISH.reduce((a,f)=>a+FISH_W[f.g],0),r=Math.random()*tot;for(const f of FISH){r-=FISH_W[f.g];if(r<=0)return f;}return FISH[0];}
+function fishCast(G){if(G.phase!=='ready'||castsLeft()<=0)return;if(G.cat&&G.cat.t<.8)return;G.cat=null;G.cele=null;ensureHobby().casts.n++;G.phase='wait';G.t=0;G.wait=R(1.8,5.5);G.twitch=0;sfx('click');fishUI(G);save();}
+function fishPick(){const L=spotFish();let tot=L.reduce((a,f)=>a+FISH_W[f.g],0),r=Math.random()*tot;for(const f of L){r-=FISH_W[f.g];if(r<=0)return f;}return L[0];}
 function fishInput(G,type){
   if(type==='up'){G.hold=false;return;}
   if(G.phase==='ready'){fishCast(G);return;}
@@ -2389,13 +2464,22 @@ function fishInput(G,type){
 function fishEnd(G,ok,why){
   const H=ensureHobby(),f=G.fish;G.hold=false;
   if(ok){const w=f.g==='j'?.6:Math.round((f.w[0]+(f.w[1]-f.w[0])*Math.pow(Math.random(),1.6))*10)/10;
-    if(f.g==='j'){G.res='헌 장화를 낚았어요… 😅';}
+    if(f.g==='j'){G.res='헌 장화를 낚았어요… 😅';G.cat={f,t:0};G.cele=celeStart(0,'꽝…','헌 장화',`#c8b8a0`);}
     else{const first=!H.fish[f.id],rec=!first&&w>H.fish[f.id];H.fish[f.id]=Math.max(H.fish[f.id]||0,w);
       const big=w>=f.w[0]+(f.w[1]-f.w[0])*.8; /* 대물(상위 20% 무게)은 1.5배 */
-      const pay=Math.round(w*f.p*(big?1.5:1)*(first?2:1)/1e4)*1e4;state.money+=pay;
-      G.res=`<b>${f.name} ${w}kg</b>${big?' · 🐋 대물!':''}${first?' · 🆕 도감 등록 (첫 손맛 2배)':rec?' · 🏆 최고 기록!':''}<br>횟집에 <b>${won(pay)}</b>에 팔았어요.`;sfx(f.g==='m'||big?'level':'coin');
+      const pay=Math.round(w*f.p*fishMult()*(big?1.5:1)*(first?2:1)/1e4)*1e4;state.money+=pay;
+      G.res=`<b>${f.name} ${w}kg</b>${big?' · 🐋 대물!':''}${first?' · 🆕 도감 등록 (첫 손맛 2배)':rec?' · 🏆 최고 기록!':''}<br>횟집에 <b>${won(pay)}</b>에 팔았어요.`;sfx('splash');sfx(f.g==='m'||big?'level':'coin');
+      const tier=f.g==='m'?3:(f.g==='r'||big)?2:1;
+      G.cat={f,t:0};G.cele=celeStart(tier,f.g==='m'?`✨ 전설의 ${f.name}!! ✨`:big?`🐋 대물 ${f.name}!`:`${f.name}!`,`${w}kg · +${won(pay)}${first?' · 🆕 도감 등록':''}`,f.g==='m'?'#ffd54a':f.g==='r'?'#9fd8ff':'#ffffff');
       log(`🎣 ${f.name} ${w}kg`);
-      if(!H.fishDone&&FISH.every(x=>x.g==='j'||H.fish[x.id])){H.fishDone=true;state.rating=clamp(state.rating+.05,1,5);G.res+='<br>🎉 <b>도감 완성!</b> "강태공 원장님" 소문이 나서 평점 +0.05';}}
+      /* 도감 완성 → 보너스 + 다음 낚시터의 새 도감 */
+      if(dexFish().every(x=>H.fish[x.id])){
+        const rg=fishSpot(),bonus=Math.round(1e8*(rg+1)*fishMult()/1e6)*1e6;state.money+=bonus;state.rating=clamp(state.rating+.05,1,5);
+        H.clears=(H.clears||0)+1;const nx=(rg+1)%FISH_SPOTS.length;if(nx===0)H.lap=(H.lap||0)+1;H.rg=nx;
+        FISH.filter(x=>x.rg===nx).forEach(x=>{delete H.fish[x.id];});
+        G.res+=`<br>📖 <b>${FISH_SPOTS[rg].name} 도감 완성!</b> 보너스 ${won(bonus)} + 평점 +0.05<br>🗺 새 낚시터 열림: <b>${FISH_SPOTS[nx].name}</b>${H.lap?` (판매가 ×${fishMult()})`:''}. 새 도감을 채워보세요!`;
+        G.cele=celeStart(3,'📖 도감 완성!',`보너스 ${won(bonus)} · 다음 낚시터: ${FISH_SPOTS[nx].name}`,'#ffd54a');
+        log(`📖 ${FISH_SPOTS[rg].name} 도감 완성 (보너스 ${won(bonus)})`);toast(`도감 완성! 새 낚시터 ${FISH_SPOTS[nx].name}`);}}
   }else{G.res=why;sfx('bad');}
   G.phase='ready';fishUI(G);save();
 }
@@ -2415,10 +2499,11 @@ function fishStep(G,dt){
 }
 function fishDraw(G){
   const c=HB.ctx,W=360;if(!c)return;const t=performance.now()/1000;
-  const sky=c.createLinearGradient(0,0,0,150);sky.addColorStop(0,'#f2b98a');sky.addColorStop(1,'#f6dcb4');c.fillStyle=sky;c.fillRect(0,0,W,150);
+  const SP=FISH_SPOTS[fishSpot()];
+  const sky=c.createLinearGradient(0,0,0,150);sky.addColorStop(0,SP.sky[0]);sky.addColorStop(1,SP.sky[1]);c.fillStyle=sky;c.fillRect(0,0,W,150);
   c.fillStyle='#ffe7a8';c.beginPath();c.arc(280,70,22,0,Math.PI*2);c.fill();
-  c.fillStyle='#6f8a5a';c.beginPath();c.moveTo(0,150);for(let x=0;x<=W;x+=30)c.lineTo(x,120+Math.sin(x*.05)*12);c.lineTo(W,150);c.fill();
-  const wat=c.createLinearGradient(0,150,0,400);wat.addColorStop(0,'#4f8fa8');wat.addColorStop(1,'#1f4a64');c.fillStyle=wat;c.fillRect(0,150,W,250);
+  c.fillStyle=SP.hill;c.beginPath();c.moveTo(0,150);for(let x=0;x<=W;x+=30)c.lineTo(x,(fishSpot()===2?140:120)+Math.sin(x*.05)*(fishSpot()===2?4:12));c.lineTo(W,150);c.fill();
+  const wat=c.createLinearGradient(0,150,0,400);wat.addColorStop(0,SP.water[0]);wat.addColorStop(1,SP.water[1]);c.fillStyle=wat;c.fillRect(0,150,W,250);
   c.fillStyle='rgba(255,255,255,.18)';for(let i=0;i<14;i++){const y=165+i*16,x=((i*71+t*12)%(W+60))-30;c.fillRect(x,y,28,2);}
   c.fillStyle='#7a5230';c.fillRect(0,300,120,14);c.fillRect(20,314,8,86);c.fillRect(90,314,8,86);
   /* 원장님 + 낚싯대 */
@@ -2436,7 +2521,14 @@ function fishDraw(G){
     cvText(c,'줄 장력',14,384,{size:12});c.fillStyle='#22333f';c.fillRect(90,374,256,12);
     const tg=c.createLinearGradient(90,0,346,0);tg.addColorStop(0,'#6fb7d8');tg.addColorStop(.7,'#e0b23a');tg.addColorStop(1,'#e0362b');c.fillStyle=tg;c.fillRect(90,374,256*clamp(G.ten,0,1),12);
     c.fillStyle='#fff';c.fillRect(90+256*.85,370,2,20);}
-  const H=ensureHobby();cvText(c,`남은 캐스팅 ${castsLeft()}/${CASTS_PER_DAY}`,10,20,{size:12,col:'#3a2a1a'});
+  cvText(c,`📍 ${SP.name} · 남은 캐스팅 ${castsLeft()}/${CASTS_PER_DAY}`,10,20,{size:12,col:'#3a2a1a'});
+  /* 잡은 순간: 물보라와 함께 물고기가 튀어 올라 화면 가운데서 퍼덕여요 */
+  if(G.cat){const dt=HB.dt||.016;G.cat.t+=dt;const k=G.cat.t,f=G.cat.f;
+    c.fillStyle=`rgba(0,0,0,${Math.min(.45,k*1.2)})`;c.fillRect(0,0,W,400);
+    celeDraw(c,G.cele,dt,190);
+    const up=Math.min(1,k/.45),y=320-Math.sin(up*Math.PI/2)*70+(k>.45?Math.sin(k*7)*4:0);
+    if(k<.7)for(let i=0;i<14;i++){const a=i/14*Math.PI,r=k*160;c.fillStyle='rgba(220,240,255,.8)';c.fillRect(bobX-60+Math.cos(a)*r*.7+60,250-Math.sin(a)*r*.6+k*k*200,4,4);}
+    c.save();c.translate(180,y);c.rotate(Math.sin(k*9)*.12*(k>.45?1:0));drawFishSprite(c,f,0,0,f.id==='snakehead'?7:8,k);c.restore();}
 }
 
 /* ===== 피아노 (리듬 게임) ===== */
@@ -2587,6 +2679,9 @@ function sfx(name,arg){
     case'level':[60,64,67,72,76,79].forEach((m,i)=>voice(mtof(m+12),t+i*.07,.35,{type:'triangle',vol:.07}));break;
     case'buy':voice(1568,t,.08,{type:'square',vol:.04,filter:4000});voice(2093,t+.08,.4,{type:'sine',vol:.07});break;
     case'chime':[72,76,79,84].forEach((m,i)=>voice(mtof(m),t+i*.18,1.2,{type:'sine',vol:.06}));break;
+    case'fanfare':[67,72,76,79].forEach((m,i)=>voice(mtof(m),t+i*.1,.25,{type:'square',vol:.04,filter:3000}));[72,76,79,84].forEach(m=>voice(mtof(m),t+.42,1.1,{type:'triangle',vol:.06,filter:3600}));break;
+    case'splash':{const c=Snd.ctx,n=c.sampleRate*.35,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+      const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=b;f.type='bandpass';f.frequency.value=1400;g.gain.value=.35;s.connect(f);f.connect(g);g.connect(Snd.sfx);s.start(t);break;}
   }
 }
 
