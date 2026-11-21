@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T10:58:26.237Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T11:05:10.847Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -907,7 +907,7 @@ DIFFS.gold={name:'경영 모드 (금수저)',loan:0,money:5e8,rate:.05,limit:-1e
 const isBiz=()=>!!(state&&DIFFS[state.diff]&&DIFFS[state.diff].biz);
 /* ---------- 온라인 총자산 랭킹 (Firebase · 서버 코드 없이 REST로) ----------
    RANK_CFG가 비어 있으면 랭킹 화면에서 "준비 중"으로 보여요. */
-const RANK_CFG={apiKey:'',projectId:''};
+const RANK_CFG={apiKey:'AIzaSyBFdVzWgBiN9ppm7yjDES9C9TrwfoHPrns',projectId:'painclinic-rank'}; /* 웹 API 키는 공개 식별자. 보호는 Firestore 보안 규칙으로 */
 const RANK_KEY='painclinic-rank-v1';
 const rankOn=()=>!!(RANK_CFG.apiKey&&RANK_CFG.projectId);
 function rankLocal(){try{return JSON.parse(localStorage.getItem(RANK_KEY))||{};}catch(e){return{};}}
