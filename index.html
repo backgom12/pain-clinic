@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T03:42:27.675Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T10:58:26.237Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -251,6 +251,14 @@ table.ledger tr.total td{font-weight:700;border-bottom:0;padding-top:8px}
 .up{color:var(--good)}
 .spark{width:100%;height:30px;display:block}
 .modal.still{animation:none}
+.modeh{font-size:16px;margin:6px 0 0}.modeh small{font-family:var(--f-body);font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
+.rank-me{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.rank-list{display:flex;flex-direction:column;gap:4px}
+.rank-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13.5px}
+.rank-row.me{border-color:var(--teal);background:var(--teal-soft)}
+.rank-row .no{font-family:var(--f-mono);font-weight:700;text-align:center}
+.rank-row .nw{font-family:var(--f-mono)}
+.rank-row small{color:var(--muted)}
 .chip.dim{opacity:.45;text-decoration:line-through}
 .lvbtn{font:inherit;color:inherit;background:none;border:0;border-bottom:1px dashed currentColor;padding:0;cursor:pointer}
 .perks{display:flex;flex-direction:column;gap:6px}
@@ -881,20 +889,89 @@ let state=null;
 const maxFat=()=>100+(state.level-1)*5;
 const xpNext=()=>100+state.level*90;
 const DIFFS={
- normal:{name:'노말',loan:5e8,money:6e7,rate:.05,limit:-5e7,patience:0,
+ normal:{name:'진료 체험 모드',loan:5e8,money:6e7,rate:.05,limit:-5e7,patience:0,
    owned:{us:true,carm:true,xray:true,eswt:1,manualRoom:1},staff:{reception:1,counselor:1,nurse:1,pt:2,radio:1},
-   desc:'개원 자금 5억(대출). C-arm·초음파·X-ray·체외충격파·도수치료실과 직원 6명을 갖추고 시작해요.'},
- hard:{name:'어려움',loan:3e8,money:5e7,rate:.05,limit:-3e7,patience:0,
+   desc:'원장님이 직접 환자를 보는 모드예요. 개원 자금 5억(대출)으로 C-arm·초음파·X-ray·체외충격파·도수치료실과 직원 6명을 갖추고 시작해요.'},
+ /* 어려움·하드코어: 예전 저장 파일용으로만 남겨두고 새 게임에서는 고를 수 없어요 */
+ hard:{name:'어려움',hidden:true,loan:3e8,money:5e7,rate:.05,limit:-3e7,patience:0,
    owned:{xray:true},staff:{reception:1,counselor:0,nurse:1,pt:1,radio:1},
    desc:'개원 자금 3억(대출). X-ray만 있고 직원 4명. 초음파·C-arm·체외충격파·도수치료실은 벌어서 하나씩 들여야 해요.'},
- hardcore:{name:'하드코어',loan:6e8,money:2e7,rate:.07,limit:-2e7,patience:-10,
+ hardcore:{name:'하드코어',hidden:true,loan:6e8,money:2e7,rate:.07,limit:-2e7,patience:0,
    owned:{xray:true},staff:{reception:1,counselor:0,nurse:1,pt:1,radio:1},
    desc:'어려움과 같은 구성에 기존 빚 3억까지 안고 시작해요. 대출 6억(금리 7%), 운영 자금 2,000만, 환자들도 덜 기다려줘요.'}
 };
-DIFFS.gold={name:'금수저',loan:0,money:5e8,rate:.05,limit:-1e8,patience:10,rating:4.2,auto:true,
+DIFFS.gold={name:'경영 모드 (금수저)',loan:0,money:5e8,rate:.05,limit:-1e8,patience:0,rating:4.2,auto:true,biz:true,
    owned:{us:true,carm:true,xray:true,rf:true,eswt:2,manualRoom:2,remodel:true,sign:true},
    staff:{reception:2,counselor:1,nurse:2,pt:4,radio:1,assoc:2},
-   desc:'빚 없이 현금 5억으로 시작해요. 고주파까지 장비 풀세트, 부원장 2명을 포함한 직원 14명. 처음부터 자동 운영으로 돌아가니 원장님은 경영만 하세요.'};
+   desc:'빚 없이 현금 5억, 장비 풀세트, 부원장 2명으로 시작해요. 병원은 자동으로 돌아가고, 원장님은 경영 → 투자로 자산을 불려 전국 총자산 랭킹에서 겨뤄요. VIP 환자만 직접 봐요.'};
+const isBiz=()=>!!(state&&DIFFS[state.diff]&&DIFFS[state.diff].biz);
+/* ---------- 온라인 총자산 랭킹 (Firebase · 서버 코드 없이 REST로) ----------
+   RANK_CFG가 비어 있으면 랭킹 화면에서 "준비 중"으로 보여요. */
+const RANK_CFG={apiKey:'',projectId:''};
+const RANK_KEY='painclinic-rank-v1';
+const rankOn=()=>!!(RANK_CFG.apiKey&&RANK_CFG.projectId);
+function rankLocal(){try{return JSON.parse(localStorage.getItem(RANK_KEY))||{};}catch(e){return{};}}
+function rankSaveLocal(o){try{localStorage.setItem(RANK_KEY,JSON.stringify({...rankLocal(),...o}));}catch(e){}}
+const Rank={list:null,err:'',busy:false,at:0};
+async function rankToken(){
+  const L=rankLocal(),k=RANK_CFG.apiKey;
+  if(L.idToken&&L.exp>Date.now()+6e4)return L;
+  let r;
+  if(L.refreshToken){r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${k}`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(L.refreshToken)}`}).then(x=>x.json());
+    if(r.id_token){const o={idToken:r.id_token,refreshToken:r.refresh_token,uid:r.user_id,exp:Date.now()+(+r.expires_in)*1e3};rankSaveLocal(o);return{...L,...o};}}
+  r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${k}`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{"returnSecureToken":true}'}).then(x=>x.json());
+  if(!r.idToken)throw new Error('로그인 실패');
+  const o={idToken:r.idToken,refreshToken:r.refreshToken,uid:r.localId,exp:Date.now()+(+r.expiresIn)*1e3};rankSaveLocal(o);return{...L,...o};
+}
+const FS=()=>`https://firestore.googleapis.com/v1/projects/${RANK_CFG.projectId}/databases/(default)/documents`;
+async function rankSubmit(){
+  if(!rankOn()||!isBiz())return;const L=rankLocal();if(!L.nick)return;
+  const nw=netWorth().total;const best=Math.max(nw,L.best||-Infinity);const bestDay=best===nw?state.day:(L.bestDay||state.day);
+  rankSaveLocal({best,bestDay});
+  const t=await rankToken();
+  const body={fields:{nick:{stringValue:L.nick.slice(0,12)},clinic:{stringValue:String(state.clinic).slice(0,20)},worth:{integerValue:String(Math.round(best))},day:{integerValue:String(bestDay)},updated:{timestampValue:new Date().toISOString()}}};
+  const r=await fetch(`${FS()}/ranks/${t.uid}`,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${t.idToken}`},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('기록 저장 실패 ('+r.status+')');
+}
+async function rankFetch(){
+  if(!rankOn())return;Rank.busy=true;Rank.err='';
+  try{
+    try{await rankSubmit();}catch(e){Rank.err=e.message;}
+    const q={structuredQuery:{from:[{collectionId:'ranks'}],orderBy:[{field:{fieldPath:'worth'},direction:'DESCENDING'}],limit:50}};
+    const r=await fetch(`${FS()}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(q)}).then(x=>x.json());
+    Rank.list=(Array.isArray(r)?r:[]).filter(x=>x.document).map(x=>{const f=x.document.fields,id=x.document.name.split('/').pop();return{id,nick:f.nick?f.nick.stringValue:'?',clinic:f.clinic?f.clinic.stringValue:'',worth:+(f.worth?f.worth.integerValue:0),day:+(f.day?f.day.integerValue:0)};});
+    Rank.at=Date.now();
+  }catch(e){Rank.err='랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';}
+  Rank.busy=false;if(state&&state.modal&&state.modal.type==='rank')render();
+}
+function renderRank(){
+  const N=netWorth(),L=rankLocal(),me=L.uid;
+  const part=[['현금',N.cash],['주식·코인',N.stocks],['예금·적금',N.deps],['건물 (대출 뺀 값)',N.bld],['미술품',N.art],['개원 대출',-N.loan]];
+  let online='';
+  if(!isBiz())online=`<div class="banner">전국 랭킹은 <b>💼 경영 모드</b>에서만 참가할 수 있어요. 모두 같은 조건(현금 5억)에서 시작해야 공정하니까요. "새 게임"에서 경영 모드를 골라보세요.</div>`;
+  else if(!rankOn())online=`<div class="banner">🛠 전국 랭킹 서버를 준비하고 있어요. 곧 다른 원장님들과 총자산을 겨룰 수 있어요!</div>`;
+  else{
+    online=`<div class="field"><label for="rank-nick">랭킹에 쓸 닉네임 (최대 12자)</label><div class="row" style="justify-content:flex-start"><input id="rank-nick" maxlength="12" value="${esc(L.nick||'')}" placeholder="예: 강남통증왕"><button class="btn sm primary" data-act="ranknick">저장하고 올리기</button></div></div>
+      ${Rank.err?`<p class="hint neg">${esc(Rank.err)}</p>`:''}
+      ${Rank.busy?'<p class="hint">불러오는 중…</p>':''}
+      ${Rank.list?`<div class="rank-list">${Rank.list.map((r,i)=>`<div class="rank-row ${r.id===me?'me':''}"><span class="no">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><span>${esc(r.nick)} <small>· ${esc(r.clinic)} · ${r.day}일차</small></span><span class="nw">${won(r.worth)}</span></div>`).join('')||'<p class="hint">아직 기록이 없어요. 첫 번째가 되어보세요!</p>'}</div>`:''}
+      <p class="hint">내 최고 총자산이 올라가요 (새 게임을 해도 최고 기록은 유지). 경영 모드에서는 하루가 끝날 때마다 자동으로 갱신돼요.</p>`;
+  }
+  return`<h2>🏆 총자산 랭킹</h2>
+    <p class="lead">내 총자산 <b class="${N.total<0?'neg':''}">${won(N.total)}</b> · 개원 ${state.day}일차${L.best?` · 내 최고 기록 ${won(L.best)}`:''}</p>
+    <div class="rank-me">${part.map(([k,v])=>`<div class="stat"><span class="k">${k}</span><span class="v ${v<0?'neg':''}" style="font-size:15px">${won(v)}</span></div>`).join('')}</div>
+    ${online}
+    <div class="row">${isBiz()&&rankOn()?'<button class="btn" data-act="rankref">새로고침</button>':''}<button class="btn primary" data-act="close">닫기</button></div>`;
+}
+/* 총자산 = 현금 + 주식·예금 + 건물(시세 − 담보대출) + 미술품 − 개원 대출 */
+function netWorth(){
+  const s=state;let stocks=0,deps=0,bld=0,art=0;
+  if(s.inv){stocks=STOCKS.reduce((a,x)=>a+stockVal(x.id),0);deps=(s.inv.dep||[]).reduce((a,d)=>a+d.bal+d.acc,0);}
+  if(s.bld){const B=s.bld;if(B.own)bld+=B.value-B.mort;else if(B.floor)bld+=Math.round(B.value*.2);(B.extra||[]).forEach(e=>{bld+=e.value-e.mort;});}
+  if(s.office&&s.artMkt)art=s.office.art.reduce((a,x)=>a+artValue(x.id),0);
+  const total=Math.round(s.money+stocks+deps+bld+art-s.loan);
+  return{total,cash:s.money,stocks,deps,bld,art,loan:s.loan};
+}
 const diffOf=()=>DIFFS[state.diff]||DIFFS.normal;
 const dailyInterest=()=>Math.round(state.loan*diffOf().rate/365);
 function fresh(name,diff){const D=DIFFS[diff]||DIFFS.normal;return{v:2,diff:DIFFS[diff]?diff:'normal',clinic:name||'김원장 통증의학과',day:1,money:D.money,loan:D.loan,
@@ -1285,6 +1362,7 @@ function nextDay(){
   const dxp=comfort()*2+(state.office.furn.shelf?3:0)+(state.owned.chair?5:0);if(dxp)gainXp(dxp);
   if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진이에요.');}
   bldTick().forEach(m=>{toast(m);log(m);});const mk=stockTick();
+  if(isBiz()&&rankOn()&&rankLocal().nick&&state.day%3===0)rankSubmit().catch(()=>{});
   mk.hit.forEach(n=>{const nm=sname(n.sid),h=n.sid!=='mkt'&&state.inv.hold[n.sid];toast(`${n.move>=0?'📈':'📉'} ${nm} ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%${h?' (보유 중!)':''}`);
     log(`<b>${nm}</b> 뉴스 결과 ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%`);});
   if(mk.div)toast(`배당금 +${won(mk.div)}`);
@@ -1310,6 +1388,7 @@ function render(){
       <button class="btn" data-act="office">🖼 원장실</button>
       <button class="btn" data-act="invest">📈 재테크</button>
       <button class="btn" data-act="hobby">🎯 취미</button>
+      <button class="btn" data-act="rank">🏆 랭킹</button>
       <button class="btn ${s.auto?'primary':''}" data-act="auto" aria-pressed="${!!s.auto}">${s.auto?'자동 운영 중':'자동 운영'}</button>
       ${Ads.on?'<button class="btn" data-act="rewards">🎁 보상</button>':''}
       <button class="btn" data-act="shop">투자·채용</button>
@@ -1322,7 +1401,7 @@ function render(){
     <div class="stat"><span class="k">운영 자금</span><span class="v ${s.money<0?'neg':''}">${won(s.money)}</span></div>
     <div class="stat"><span class="k">평점</span><span class="v">${s.rating.toFixed(2)}<small class="stars-mini">${'★'.repeat(ratingStars)}</small></span></div>
     <div class="stat"><span class="k">원장 레벨</span><span class="v">Lv.${s.level}<small>경험치 ${s.xp}/${xpNext()}</small></span><div class="bar"><i style="width:${Math.min(100,s.xp/xpNext()*100)}%"></i></div></div>
-    <div class="stat"><span class="k">개원 대출 잔액</span><span class="v">${s.loan>0?won(s.loan):'완납'}</span></div>
+    <div class="stat"><span class="k">총자산${isBiz()?' 🏆':''}</span><span class="v ${netWorth().total<0?'neg':''}">${won(netWorth().total)}<small>${s.loan>0?`대출 ${won(s.loan)}`:'대출 완납'}</small></span></div>
     <div class="stat"><span class="k">오늘 매출 · 진료</span><span class="v">${T?won(T.revenue):'-'}<small>${T?T.served+'명':''}</small></span></div>
   </section>
   <main class="main">
@@ -1482,12 +1561,13 @@ function renderModal(){
   let h='';
   if(m.type==='intro'){
     h=modal(`<h2>개원을 축하합니다!</h2>
-      <p>도시의 한 빌딩에 마취통증의학과를 열었습니다. 환자를 잘 고쳐서 평점을 올리고, 대출을 갚으며 명의로 키워보세요.</p>
-      <div class="diffs" role="radiogroup" aria-label="난이도">${Object.entries(DIFFS).map(([k,D])=>{
+      <p>도시의 한 빌딩에 마취통증의학과를 열었습니다. 어떤 원장님이 되어볼까요?</p>
+      <div class="diffs" role="radiogroup" aria-label="모드">${Object.entries(DIFFS).filter(([k,D])=>!D.hidden).map(([k,D])=>{
+        const head=D.biz?`<h3 class="modeh">💼 경영 <small>경영 → 투자 → 전국 총자산 랭킹 대결</small></h3>`:`<h3 class="modeh">🩺 진료 <small>직접 환자를 진단하고 치료해요</small></h3>`;
         const wages=STAFF.reduce((a,x)=>a+x.wage*(D.staff[x.k]||0),0);
         const month=(wages+RENT+OPEX)*25+Math.round(D.loan*D.rate/12);
         const staffTxt=STAFF.filter(x=>D.staff[x.k]).map(x=>`${x.name.replace(' 직원','')} ${D.staff[x.k]}`).join(', ');
-        return`<button class="diff ${state.diff===k?'on':''}" role="radio" aria-checked="${state.diff===k}" data-act="diff" data-arg="${k}">
+        return`${head}<button class="diff ${state.diff===k?'on':''}" role="radio" aria-checked="${state.diff===k}" data-act="diff" data-arg="${k}">
           <span class="dn">${D.name}</span><span class="dd">${D.desc}</span>
           <span class="dm">대출 ${won(D.loan)} · 운영 자금 ${won(D.money)} · 월 고정비 약 ${won(month)}</span>
           <span class="dm">직원: ${staffTxt}</span></button>`;}).join('')}</div>
@@ -1541,6 +1621,7 @@ function renderModal(){
   }else if(m.type==='office'){ensureOffice();h=modal(renderOffice(),true);
   }else if(m.type==='invest'){h=modal(renderInvest(),true);
   }else if(m.type==='hobby'){h=modal(renderHobbyMenu(),true);
+  }else if(m.type==='rank'){h=modal(renderRank(),true);
   }else if(m.type==='rewards'){
     const u=adUses();
     h=modal(`<h2>🎁 광고 보고 보상 받기</h2><p class="lead">짧은 광고를 끝까지 보면 보상을 받아요. 횟수는 매일 다시 채워져요.</p>
@@ -1619,7 +1700,7 @@ function onBack(){
   if(!state)return;if(HB.el){hobbyClose();return;}const m=state.modal,T=state.today;
   if(T&&T.grading)return;
   if(m&&m.type==='exitAsk'){NativeApp.A&&NativeApp.A.exitApp();return;}
-  if(m&&['shop','help','office','invest','hobby','perks','rewards','confirmNew','loanDone'].includes(m.type)){act('close');return;}
+  if(m&&['shop','help','office','invest','hobby','perks','rank','rewards','confirmNew','loanDone'].includes(m.type)){act('close');return;}
   if(m)return; /* 아침 이벤트·결산·첫 화면은 버튼으로 골라야 해요 */
   save();openOverlay('exitAsk');render();
 }
@@ -1701,6 +1782,9 @@ function act(a,arg){
     case'office':ensureOffice();openOverlay('office');break;
     case'otab':state.officeTab=arg;break;
     case'perks':openOverlay('perks');break;
+    case'rank':ensureInv();ensureOffice();openOverlay('rank');if(rankOn()&&isBiz()&&(!Rank.list||Date.now()-Rank.at>6e4))rankFetch();break;
+    case'rankref':rankFetch();break;
+    case'ranknick':{const v=((document.getElementById('rank-nick')||{}).value||'').trim().slice(0,12);if(v.length<2){toast('닉네임은 2자 이상으로 해주세요.');break;}rankSaveLocal({nick:v});toast('닉네임을 저장했어요. 랭킹에 올릴게요!');rankFetch();break;}
     case'vipgo':{if(state.modal&&state.modal.type==='vipIntro'){state.modal=null;if(T){T.pending=false;genArrivals();vipSpawn();}}break;}
     case'hobby':ensureHobby();openOverlay('hobby');break;
     case'hplay':{if(arg==='golf'&&(ensureHobby().golfDay===state.day||state.money<GOLF_FEE))break;if(arg==='fish'&&castsLeft()<=0)break;
