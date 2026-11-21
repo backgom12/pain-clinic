@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T03:37:43.345Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T03:42:27.675Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -747,7 +747,7 @@ const EQUIP=[
  {k:'manualRoom',name:'도수치료실',cost:2e7,max:3,desc:`방 1개당 하루 도수치료 ${MANUAL_PER_ROOM}회. 물리치료사도 함께 늘려야 해요.`},
  {k:'rf',name:'고주파 열응고 장비',cost:3.5e7,req:'carm',desc:'후관절·무릎 신경 고주파 열응고술 가능.'},
  {k:'remodel',name:'대기실 리모델링',cost:15e6,desc:'환자 인내심 +15분, 만족도 소폭 상승.'},
- {k:'chair',name:'원장실 안마의자',cost:5e6,desc:'점심시간 체력 회복 +15.'},
+ {k:'chair',name:'원장실 안마의자',cost:5e6,desc:'점심시간에 푹 쉬어서 매일 경험치 +5.'},
  {k:'sign',name:'LED 간판 교체',cost:8e6,desc:'지나가는 사람 눈에 잘 띄어요. 하루 환자 +1.'}
 ];
 /* wage = monthly total labor cost (incl. 4대보험) / 25 working days */
@@ -787,7 +787,7 @@ const EVENTS=[
  {id:'rain',cond:()=>true,title:'장마 시작',text:'비가 오니 무릎·어깨 아픈 어르신들이 몰려와요.',
   opts:[{label:'우산꽂이부터 꺼내자',fx:(s,T)=>{T.extra+=3;T.boost={knee:3,frozen:2,stenosis:1.5};},res:'오늘은 관절 환자가 많아요.'}]},
  {id:'pharma',cond:()=>true,title:'제약회사 영업사원 방문',text:'점심 도시락과 신제품 소개 자료를 들고 왔어요.',
-  opts:[{label:'도시락 감사히 받기 (체력 +15)',fx:s=>{s.fatigue=Math.min(maxFat(),s.fatigue+15);},res:'든든하게 먹고 힘이 났어요.'},
+  opts:[{label:'신제품 설명 듣기 (경험치 +15)',fx:s=>{gainXp(15);},res:'새 약 정보를 알게 됐어요.'},
         {label:'정중히 거절 (평판 소폭 상승)',fx:s=>{s.rating=clamp(s.rating+.02,1,5);},res:'깔끔한 원장님이라는 소문이 났어요.'}]},
  {id:'audit',cond:s=>s.day>10,title:'심평원 현지조사 통보',text:'건강보험심사평가원에서 최근 진료기록을 확인하겠다고 연락이 왔어요.',
   opts:[{label:'진료기록 제출',fx:s=>{if(s.overtreat>=3){const fine=s.overtreat*2e6;s.money-=fine;s.rating=clamp(s.rating-.1,1,5);s._res=`과잉진료 ${s.overtreat}건 적발. 환수금 ${won(fine)}을 냈고 평점이 떨어졌어요.`;}else{s.rating=clamp(s.rating+.03,1,5);s._res='깔끔한 진료기록으로 무사 통과! 평점이 조금 올랐어요.';}s.overtreat=0;},res:s=>s._res}]},
@@ -799,9 +799,6 @@ const EVENTS=[
   opts:[{label:'개업 축하 화분 보내기',fx:s=>{s.pharmacy=true;},res:'이제 약 처방 만족도가 올라가요.'}]},
  {id:'holiday',cond:s=>dowOf(s.day)===4,title:'명절 연휴 전날',text:'연휴 전에 치료받으려는 환자들로 아침부터 붐벼요.',
   opts:[{label:'오늘 각오하자',fx:(s,T)=>{T.extra+=6;},res:'오늘은 환자가 6명 더 와요.'}]},
- {id:'cold',cond:()=>true,title:'원장님 감기 기운',text:'목이 칼칼하고 몸이 무거워요.',
-  opts:[{label:'수액 맞고 버틴다 (-10만원, 체력 -5)',fx:s=>{s.money-=1e5;s.fatigue=Math.max(0,s.fatigue-5);},res:'수액 덕분에 좀 낫네요.'},
-        {label:'그냥 버틴다 (체력 -20)',fx:s=>{s.fatigue=Math.max(0,s.fatigue-20);},res:'오늘은 컨디션 관리가 중요해요.'}]},
  {id:'tv',cond:s=>s.rating>=4.3,title:'지역 방송 인터뷰 요청',text:'지역 방송 "우리 동네 명의" 코너에서 인터뷰 요청이 왔어요.',
   opts:[{label:'출연한다',fx:()=>addMod(3,7,'방송 출연'),res:'일주일 동안 하루 환자가 3명 늘어요.'},{label:'진료에 집중하겠습니다',fx:()=>{},res:'겸손한 원장님!'}]},
  {id:'lecture',cond:s=>s.day>8&&dowOf(s.day)<5,title:'학회 증례 발표 초청',text:'통증학회에서 증례 발표를 해달래요. 오전 진료를 비워야 해요.',
@@ -926,7 +923,7 @@ const feeMult=()=>1+(hasPerk('fee')?.1:0)+(hasPerk('fee2')?.1:0);
 function gainXp(n){state.xp+=n;while(state.xp>=xpNext()){state.xp-=xpNext();state.level++;state.fatigue=Math.min(maxFat(),state.fatigue+10);
   const P=PERKS.find(x=>x.lv===state.level);
   if(P){toast(`원장 레벨 ${state.level}! 새 능력: ${P.name} (${P.desc})`);log(`🎖 원장 레벨 ${state.level} · <b>${P.name}</b> · ${P.desc}`);}
-  else toast(`원장 레벨 ${state.level} 달성! 최대 체력 +5, 치료 실력이 조금 올랐어요.`);
+  else toast(`원장 레벨 ${state.level} 달성! 치료 실력이 조금 올랐어요.`);
   sfx('level');}}
 function titleIdx(){let i=0;TITLES.forEach((t,k)=>{if(state.totalTreated>=t[0]&&state.rating>=t[1])i=k;});return i;}
 
@@ -1042,7 +1039,7 @@ function genArrivals(){
 function advance(m){
   const T=state.today;T.time+=m;
   if(!T.lunchDone&&T.time>=780){T.lunchDone=true;T.time+=60;const rec=10+(state.owned.chair?15:0)+(state.office&&state.office.furn.coffee?5:0);state.fatigue=Math.min(maxFat(),state.fatigue+rec);
-    T.queue.forEach(p=>p.patience+=60);log(`점심시간 · 체력 +${rec}`);}
+    T.queue.forEach(p=>p.patience+=60);log('점심시간');}
   const qBefore=T.queue.length;
   while(T.arrivals.length&&T.arrivals[0].arrive<=T.time){const p=T.arrivals.shift();T.queue.push(p);}
   if(m>0&&T.queue.length>qBefore&&!state.auto)sfx('bell');
@@ -1068,7 +1065,7 @@ function txBlock(tid){
 const canXray=()=>!txBlock('xray');
 function exam(){const p=cur();if(!p||p.examined)return;p.examined=true;state.fatigue=Math.max(0,state.fatigue-1);
   advance(Math.max(4,10-state.seminar*2));}
-function skillBonus(){let b=(state.level-1)*.05+state.seminar*.15+(state.owned.remodel?.1:0);if(state.fatigue<30)b-=(30-state.fatigue)/30*1.2;return b;}
+function skillBonus(){return(state.level-1)*.05+state.seminar*.15+(state.owned.remodel?.1:0);}
 function visitTime(tids){return 5+tids.reduce((a,k)=>a+tMin(k),0);}
 /* Stars follow the actual pain relief (VAS), then small, visible adjustments. */
 function starCalc(p,d,tids,score,over,at){
@@ -1283,8 +1280,10 @@ function endDay(){
 }
 function nextDay(){
   state.day++;state.fatigue=Math.min(maxFat(),state.fatigue+40);
-  ensureOffice();marketTick();state.fatigue=Math.min(maxFat(),state.fatigue+comfort()*2);if(state.office.furn.shelf)gainXp(3);
-  if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진. 체력을 모두 회복했어요.');}
+  ensureOffice();marketTick();
+  /* 원장실이 편할수록 매일 경험치 (편안함 1당 +2) */
+  const dxp=comfort()*2+(state.office.furn.shelf?3:0)+(state.owned.chair?5:0);if(dxp)gainXp(dxp);
+  if(dowOf(state.day)===6){state.day++;state.fatigue=maxFat();toast('일요일은 휴진이에요.');}
   bldTick().forEach(m=>{toast(m);log(m);});const mk=stockTick();
   mk.hit.forEach(n=>{const nm=sname(n.sid),h=n.sid!=='mkt'&&state.inv.hold[n.sid];toast(`${n.move>=0?'📈':'📉'} ${nm} ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%${h?' (보유 중!)':''}`);
     log(`<b>${nm}</b> 뉴스 결과 ${n.move>=0?'상승':'하락'} ${Math.round(n.move*100)}%`);});
@@ -1322,7 +1321,7 @@ function render(){
     <div class="stat"><span class="k">개원 ${s.day}일차 · ${DOW[dowOf(s.day)]}요일</span><span class="v">${T?clock(T.time):'--:--'}<small>~${T?clock(T.close):''}</small></span></div>
     <div class="stat"><span class="k">운영 자금</span><span class="v ${s.money<0?'neg':''}">${won(s.money)}</span></div>
     <div class="stat"><span class="k">평점</span><span class="v">${s.rating.toFixed(2)}<small class="stars-mini">${'★'.repeat(ratingStars)}</small></span></div>
-    <div class="stat"><span class="k">원장 체력</span><span class="v">${s.fatigue}<small>/ ${mf}</small></span><div class="bar"><i class="${fp<.3?'low':fp<.6?'mid':''}" style="width:${fp*100}%"></i></div></div>
+    <div class="stat"><span class="k">원장 레벨</span><span class="v">Lv.${s.level}<small>경험치 ${s.xp}/${xpNext()}</small></span><div class="bar"><i style="width:${Math.min(100,s.xp/xpNext()*100)}%"></i></div></div>
     <div class="stat"><span class="k">개원 대출 잔액</span><span class="v">${s.loan>0?won(s.loan):'완납'}</span></div>
     <div class="stat"><span class="k">오늘 매출 · 진료</span><span class="v">${T?won(T.revenue):'-'}<small>${T?T.served+'명':''}</small></span></div>
   </section>
@@ -1352,8 +1351,8 @@ function renderRoom(){
   if(T.pending)return`<h2>아침 조회</h2><div class="room-empty"><p>오늘 일정을 정하는 중이에요.</p></div>`;
   if(T.result)return renderResult(T.result);
   const p=cur();
-  const lateBanner=T.time>=T.close?`<div class="banner warn">진료 시간이 지났어요. 남은 환자를 보거나 마감하세요. 체력이 떨어질수록 치료 효과도 떨어져요.</div>`:'';
-  const tiredBanner=state.fatigue<30?`<div class="banner warn">원장님이 많이 지쳤어요. 체력 30 미만에서는 치료 효과가 떨어져요.</div>`:'';
+  const lateBanner=T.time>=T.close?`<div class="banner warn">진료 시간이 지났어요. 남은 환자를 보거나 마감하세요.</div>`:'';
+  const tiredBanner='';
   if(!p){
     const canWait=T.arrivals.length>0;
     return`<h2>진료실 <span>${clock(T.time)}</span></h2>${lateBanner}
@@ -1367,7 +1366,7 @@ function renderRoom(){
     const capTxt=k==='manual'?` · ${T.cap.manual}/${(state.owned.manualRoom||0)*MANUAL_PER_ROOM}`:k==='eswt'?` · ${T.cap.eswt}/${(state.owned.eswt||0)*ESWT_PER_MACHINE}`:'';
     const on=(p.txSel||[]).includes(k);
     return`<button class="tx ${t.cov?'':'nc'} ${k==='refer'?'ref':''}" data-act="txsel" data-arg="${k}" aria-pressed="${on}" ${blk&&!on?'disabled':''}>
-      <span class="t">${t.name}</span><span class="m">${txTime(k)}분 · ${t.price?won(t.price):'진찰료만'} · 체력 ${txFat(k)}${capTxt}</span>
+      <span class="t">${t.name}</span><span class="m">${txTime(k)}분 · ${t.price?won(t.price):'진찰료만'}${capTxt}</span>
       <span class="n ${blk?'lock':''}">${blk||t.note}</span></button>`;}).join('');
   return`<h2>진료실 <span>${clock(T.time)} · 진찰 기본 5분</span></h2>${lateBanner}${tiredBanner}
    <div class="chart-head"><div class="avatar" aria-hidden="true">${p.avatar}</div>
@@ -1429,7 +1428,7 @@ function renderAiBox(p){
     <fieldset class="todo"><legend>오늘 할 일 <small>위 버튼을 누르거나 직접 적기 · Enter로 바로 채점</small></legend>
       ${[0,1,2].map(i=>`<div class="todo-row"><span class="num">${i+1}</span><input id="tx-${i+1}" autocomplete="off" aria-label="오늘 할 일 ${i+1}" placeholder="${i?'(선택)':'오늘 할 치료'}" value="${esc((p.draftTxs||[])[i]||'')}" ${busy?'disabled':''}></div>`).join('')}
     </fieldset>
-    <p class="hint">지금 쓸 수 있는 장비: ${equipText()} 처방한 치료에 맞춰 시간·진료비·체력이 자동으로 계산돼요.</p>
+    <p class="hint">지금 쓸 수 있는 장비: ${equipText()} 처방한 치료에 맞춰 시간·진료비가 자동으로 계산돼요.</p>
     ${T.aiError?`<div class="banner warn">${esc(T.aiError)}</div>`:''}
     <div class="row" style="justify-content:flex-start">
       ${busy?`<span class="thinking">지도교수가 차트를 검토하는 중…</span><button class="btn sm" data-act="cancelai">취소</button>`
@@ -1535,7 +1534,7 @@ function renderModal(){
       <h3>하루 진료</h3><ul><li>평일 09:00~18:00 (점심 13~14시), 토요일 09:00~13:00, 일요일 휴진.</li><li>대기실에서 환자를 골라 진료하세요. 모든 진료는 기본 5분 + 치료 시간이 걸려요.</li><li>오래 기다리면 환자가 돌아가고 평점이 내려가요. 인내심 막대를 보세요.</li></ul>
       <h3>진단과 치료</h3><ul><li><b>직접 입력 · AI 채점</b>: 진단과 치료 계획을 직접 적으면 Claude가 실제 임상 기준으로 채점해요. 점수가 치료 효과(VAS 감소)와 별점에 반영되고, 적은 치료에 맞춰 시간·진료비가 계산돼요. 채점 한 번마다 내 Claude 사용량이 조금 쓰여요.</li><li><b>빠른 선택</b>: 치료 버튼을 최대 3개 고른 뒤 '진료 완료'를 누르면 진료해요. 가장 잘 듣는 치료에 나머지 치료가 보조 효과를 더해요. 게임에 정해진 효과표로 계산해요.</li><li>별점은 통증이 줄어든 비율로 정해지고, 대기 시간·비급여 부담·과잉진료 등이 ±로 붙어요. 결과 화면에 계산 과정이 나와요.</li><li>환자의 호소와 진찰 소견으로 진단을 추정하세요. 진단은 객관식이에요. 보기 중 가장 의심되는 순서대로 최대 3개를 누르세요. 1순위가 맞으면 60점, 2순위 25점, 3순위 15점이고, 모범 순위 안에 있지만 순서가 다르면 절반을 받아요. 진단 점수가 높을수록 치료 효과도 조금 올라가요.</li><li>질환마다 잘 듣는 치료가 달라요. 결과 화면에서 모범 치료를 알려줘요.</li><li>효과 없는 비싼 비급여 치료는 과잉진료로 기록돼요. 쌓이면 심평원 조사에서 환수금을 내요.</li><li>실손보험이 없는 환자는 비싼 비급여 치료에 불만이 커요. 상담실장을 두면 줄어들어요.</li></ul>
       <h3>레드 플래그</h3><ul><li>배뇨 장애, 발열, 체중 감소, 암 병력, 외상 후 극심한 통증 같은 신호가 보이면 <b>상급병원 전원</b>이 정답이에요.</li><li>놓치면 합의금 500만원과 큰 평점 하락이 있어요. 잡아내면 큰 보너스!</li></ul>
-      <h3>체력과 성장</h3><ul><li>시술할수록 원장 체력이 줄어요. 30 미만이면 치료 효과가 떨어져요. 점심·밤·일요일에 회복돼요.</li><li>경험치로 원장 레벨이 오르면 최대 체력과 실력이 늘어요.</li><li>물리치료사 1명은 하루 ${UNIT_PER_PT}단위를 맡아요 (물리치료·체외충격파 1, 도수 2). 도수치료실 1개는 하루 ${MANUAL_PER_ROOM}회, 체외충격파 1대는 하루 ${ESWT_PER_MACHINE}회까지예요. C-arm 시술과 X-ray는 방사선사가 있어야 해요.</li><li>돈을 모아 장비를 늘리고 직원을 뽑고, 개원 대출을 갚아보세요. 운영 자금이 ${won(diffOf().limit)} 아래로 떨어지면 폐업이에요 (지금 난이도: ${diffOf().name}).</li><li><b>자동 운영</b>: 부원장이 1명 이상이면 켤 수 있어요. 원장님은 진료하지 않고 시간이 저절로 흘러가요. 부원장들이 모든 환자를 보고, 하루가 끝나면 결산이 쌓이고 다음 날로 넘어가요. 일시정지와 1·3·8배속을 쓸 수 있어요. 금수저 모드는 처음부터 자동 운영으로 시작해요.</li><li>VAS 5 이상인 초진 환자는 접수 후 바로 아픈 부위 X-ray를 찍어요 (X-ray와 방사선사가 있을 때). 주사 없이 물리치료나 약만 원하는 환자는 '보존치료 희망'으로 표시되고 X-ray를 찍지 않아요. 이런 환자에게 주사·시술을 하면 만족도가 떨어져요.</li></ul>
+      <h3>성장</h3><ul><li>경험치로 원장 레벨이 오르면 최대 새 능력이 열려요 (위쪽 "원장 Lv."을 누르면 혜택 목록). 원장실을 편하게 꾸밀수록 매일 경험치가 쌓여요.</li><li>물리치료사 1명은 하루 ${UNIT_PER_PT}단위를 맡아요 (물리치료·체외충격파 1, 도수 2). 도수치료실 1개는 하루 ${MANUAL_PER_ROOM}회, 체외충격파 1대는 하루 ${ESWT_PER_MACHINE}회까지예요. C-arm 시술과 X-ray는 방사선사가 있어야 해요.</li><li>돈을 모아 장비를 늘리고 직원을 뽑고, 개원 대출을 갚아보세요. 운영 자금이 ${won(diffOf().limit)} 아래로 떨어지면 폐업이에요 (지금 난이도: ${diffOf().name}).</li><li><b>자동 운영</b>: 부원장이 1명 이상이면 켤 수 있어요. 원장님은 진료하지 않고 시간이 저절로 흘러가요. 부원장들이 모든 환자를 보고, 하루가 끝나면 결산이 쌓이고 다음 날로 넘어가요. 일시정지와 1·3·8배속을 쓸 수 있어요. 금수저 모드는 처음부터 자동 운영으로 시작해요.</li><li>VAS 5 이상인 초진 환자는 접수 후 바로 아픈 부위 X-ray를 찍어요 (X-ray와 방사선사가 있을 때). 주사 없이 물리치료나 약만 원하는 환자는 '보존치료 희망'으로 표시되고 X-ray를 찍지 않아요. 이런 환자에게 주사·시술을 하면 만족도가 떨어져요.</li></ul>
       <h3>재테크</h3><ul><li><b>예금·적금</b>: 원금이 줄지 않는 가장 안전한 방법이에요. 예금은 ${DEP_TERM}일, 적금은 매주 ${SAV_WEEKS}주 동안 넣고 만기에 이자와 함께 받아요. 기준금리 뉴스에 따라 금리가 바뀌어요.</li><li><b>지수 ETF</b>: 여러 회사에 나눠 투자해서 덜 흔들려요. 매주 자동 매수를 켜둘 수 있어요.</li><li><b>개별 종목·코인</b>: 아침마다 제약·의료기기 뉴스가 떠요. 발표 직후엔 주가가 일단 들썩이고, 2~4일 뒤 진짜 결과가 반영돼요. 임상시험 설계와 효과 크기를 의사의 눈으로 판단해서 사고팔아 보세요. 단톡방 루머는 근거가 없어요.</li><li><b>건물</b>: 우리 층(3층)을 사면 임대료가 사라져요. 건물을 통째로 사면 층마다 세입자를 골라 임대 수입을 받고, 정형외과·필라테스·영상의학과처럼 병원과 시너지 나는 세입자를 들일 수 있어요. 담보대출로 계약금 40%만 내고 살 수도 있어요.</li></ul>
       <p class="lead">매출에는 건강보험 공단 부담금이 포함된 게임용 금액이에요.</p></div>
       <div class="row"><button class="btn primary" data-act="close">알겠어요</button></div>`,true);
@@ -1552,7 +1551,7 @@ function renderModal(){
     const nx=PERKS.find(x=>x.lv>state.level);
     h=modal(`<h2>🎖 원장 레벨 혜택</h2><p class="lead">지금 <b>Lv.${state.level}</b> · 경험치 ${state.xp}/${xpNext()}${nx?` · 다음 혜택은 Lv.${nx.lv} "${nx.name}"`:' · 모든 혜택을 열었어요!'}</p>
       <div class="perks">${PERKS.map(P=>`<div class="perk ${state.level>=P.lv?'on':'off'}"><b>Lv.${P.lv}</b><span>${state.level>=P.lv?'✅':'🔒'} <b style="font-family:inherit">${P.name}</b> · ${P.desc}</span></div>`).join('')}</div>
-      <p class="hint">레벨마다 최대 체력 +5, 치료 효과도 조금씩 좋아져요. 경험치는 직접 진료(별점·진단 점수가 높을수록 많이)와 VIP 진료로 쌓이고, 자동 운영 중에는 부원장 진료 1건마다 1씩 쌓여요.</p>
+      <p class="hint">레벨마다 치료 효과도 조금씩 좋아져요. 원장실 편안함 1당 매일 경험치 +2. 경험치는 직접 진료(별점·진단 점수가 높을수록 많이)와 VIP 진료로 쌓이고, 자동 운영 중에는 부원장 진료 1건마다 1씩 쌓여요.</p>
       <div class="row"><button class="btn primary" data-act="close">닫기</button></div>`);
   }else if(m.type==='vipIntro'){
     const pl=state.vipPlan,v=pl&&VIPMAP[pl.k];
@@ -1637,7 +1636,7 @@ async function showRewarded(){
 }
 const AD_CASH=3e6,AD_REVIVE=5e7;
 function adUses(){if(!state.adUses||state.adUses.day!==state.day)state.adUses={day:state.day,fatigue:0,cash:0,double:0};return state.adUses;}
-const REWARDS={fatigue:{label:'원장 체력 +30',max:3},cash:{label:`운영 자금 +${won(AD_CASH)}`,max:2}};
+const REWARDS={cash:{label:`운영 자금 +${won(AD_CASH)}`,max:3}};
 async function watchAd(kind){
   const ok=await showRewarded();if(!ok){render();return;}
   const u=adUses();
@@ -2054,7 +2053,7 @@ const FURN=[
  {k:'plant',name:'몬스테라 화분',cost:1e6,comfort:1,desc:'초록 잎이 방을 밝혀요.'},
  {k:'lamp',name:'스탠드 조명',cost:2e6,comfort:1,desc:'따뜻한 불빛이 은은하게 일렁여요.'},
  {k:'rug',name:'페르시안 러그',cost:3e6,comfort:1,desc:'발밑이 포근해져요.'},
- {k:'coffee',name:'커피 머신',cost:3e6,comfort:1,desc:'점심시간 체력 +5.'},
+ {k:'coffee',name:'커피 머신',cost:3e6,comfort:1,desc:'향긋한 원두 냄새.'},
  {k:'cat',name:'고양이 입양',cost:3e6,comfort:3,desc:'원장실을 어슬렁거리는 치즈냥이. 사료비 포함.'},
  {k:'shelf',name:'의학서 책장',cost:4e6,comfort:1,desc:'매일 경험치 +3.'},
  {k:'desk',name:'원목 책상',cost:5e6,comfort:2,desc:'묵직한 호두나무 책상.'},
@@ -2439,7 +2438,7 @@ function renderOffice(){
       <button class="btn sm danger" data-act="asell" data-arg="${a.id}">팔기 ${won(Math.round(v*.9/1e4)*1e4)}</button></div></div>`;}).join('')
     :'<p class="lead">아직 소장품이 없어요. 미술품 경매에서 첫 작품을 사보세요.</p>';
   return`<h2>🖼 원장실</h2>
-    <p class="lead">편안함 <b>${cf}</b> · 밤사이 체력 회복 +${cf*2}${la?` · 대기실 그림: 「${la.title}」${la.g!=='c'?' (환자 만족도 상승)':''}`:''}</p>
+    <p class="lead">편안함 <b>${cf}</b> · 매일 경험치 +${cf*2}${la?` · 대기실 그림: 「${la.title}」${la.g!=='c'?' (환자 만족도 상승)':''}`:''}</p>
     <div class="office-wrap"><canvas id="office-cv" width="720" height="405" role="img" aria-label="원장실 모습"></canvas></div>
     <div class="tabs">${tabs}</div><div class="shop">${body}</div>
     <p class="hint">미술품 시세는 매일 바뀌고, 걸작일수록 길게 보면 오르는 경향이 있어요. 팔 때는 시세의 90%를 받아요. 희귀·걸작을 대기실에 걸면 환자 만족도가 올라가요.</p>
