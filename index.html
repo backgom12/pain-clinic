@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<!-- PAIN_CLINIC_GAME build 2026-11-21T01:30:55.545Z -->
+<!-- PAIN_CLINIC_GAME build 2026-11-21T02:15:31.797Z -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -2363,7 +2363,7 @@ function fishInput(G,type){
   if(type==='up'){G.hold=false;return;}
   if(G.phase==='ready'){fishCast(G);return;}
   if(G.phase==='wait'){G.phase='ready';G.res='너무 일찍 챔질했어요. 고기가 도망갔어요.';sfx('bad');fishUI(G);return;}
-  if(G.phase==='bite'){G.phase='fight';G.prog=.3;G.ten=.25;G.hold=true;G.nextSurge=R(.6,1.6);sfx('click');fishUI(G);return;}
+  if(G.phase==='bite'){G.phase='fight';G.prog=.3;G.ten=.1;G.hold=true;G.nextSurge=R(.6,1.6);sfx('click');fishUI(G);return;}
   if(G.phase==='fight')G.hold=true;
 }
 function fishEnd(G,ok,why){
@@ -2384,8 +2384,9 @@ function fishStep(G,dt){
   if(G.phase==='wait'){if(G.t>=G.wait){G.phase='bite';G.fish=fishPick();G.win=G.fish.g==='m'?.55:G.fish.g==='r'?.7:.85;G.t=0;sfx('click');}}
   else if(G.phase==='bite'){if(G.t>G.win){G.phase='ready';G.res='챔질이 늦었어요. 미끼만 따먹고 갔어요.';fishUI(G);}}
   else if(G.phase==='fight'){const s=G.fish.str;
-    if(G.hold){G.prog+=dt*.2/s;G.ten+=dt*(.32+.18*s);}else{G.prog-=dt*.06*s;G.ten-=dt*.55;}
-    G.nextSurge-=dt;if(G.nextSurge<=0){G.ten+=.12*s+R(0,.08);G.prog-=.03*s;G.nextSurge=R(.7,1.8)/s;}
+    /* 장력: 감을 때 천천히 차고, 손을 떼면 빨리 풀려요. 고기가 당기는 힘(급격한 장력 증가)도 약하게 */
+    if(G.hold){G.prog+=dt*.2/s;G.ten+=dt*(.2+.1*s);}else{G.prog-=dt*.03*s;G.ten-=dt*.75;}
+    G.nextSurge-=dt;if(G.nextSurge<=0){G.ten+=.06*s+R(0,.04);G.prog-=.012*s;G.nextSurge=R(.9,2.2)/s;}
     G.ten=Math.max(0,G.ten);
     if(G.ten>=1)fishEnd(G,false,`투둑! 줄이 끊어졌어요. ${G.fish.g==='m'?'엄청 큰 놈이었는데…':''}`);
     else if(G.prog<=0)fishEnd(G,false,'고기가 바늘을 털고 도망갔어요.');
